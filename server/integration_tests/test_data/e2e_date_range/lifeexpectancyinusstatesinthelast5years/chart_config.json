@@ -41,11 +41,10 @@
                 "tiles": [
                   {
                     "lineTileSpec": {
-                      "endDate": "2023",
                       "startDate": "2019"
                     },
                     "statVarKey": [
-                      "LifeExpectancy_Person_3397709707"
+                      "LifeExpectancy_Person_3563600999"
                     ],
                     "title": "Life Expectancy in United States",
                     "type": "LINE"
@@ -96,6 +95,7 @@
                 ]
               }
             ],
+            "description": "Life expectancy at birth indicates the number of years a newborn infant would live if prevailing patterns of mortality at the time of its birth were to stay the same throughout its life. (1) united nations population division. World population prospects: 2019 revision. (2) census reports and other statistical publications from national statistical offices, (3) eurostat: demographic statistics, (4) united nations statistical division. Population and vital statistics report (various years), (5) u.S. Census bureau: international database, and (6) secretariat of the pacific community: statistics and demography programme.",
             "title": "Female Life Expectancy in States of United States"
           },
           {
@@ -127,6 +127,7 @@
                 ]
               }
             ],
+            "description": "Life expectancy at birth indicates the number of years a newborn infant would live if prevailing patterns of mortality at the time of its birth were to stay the same throughout its life. (1) united nations population division. World population prospects: 2019 revision. (2) census reports and other statistical publications from national statistical offices, (3) eurostat: demographic statistics, (4) united nations statistical division. Population and vital statistics report (various years), (5) u.S. Census bureau: international database, and (6) secretariat of the pacific community: statistics and demography programme.",
             "title": "Male Life Expectancy in States of United States"
           },
           {
@@ -135,12 +136,11 @@
                 "tiles": [
                   {
                     "lineTileSpec": {
-                      "endDate": "2023",
                       "startDate": "2019"
                     },
                     "statVarKey": [
-                      "LifeExpectancy_Person_Female_3397709707",
-                      "LifeExpectancy_Person_Male_3397709707"
+                      "LifeExpectancy_Person_Female_2776657033",
+                      "LifeExpectancy_Person_Male_2776657033"
                     ],
                     "title": "Life Expectancy by Gender in United States",
                     "type": "LINE"
@@ -156,8 +156,8 @@
             "name": "Life Expectancy",
             "statVar": "LifeExpectancy_Person"
           },
-          "LifeExpectancy_Person_3397709707": {
-            "facetId": "3397709707",
+          "LifeExpectancy_Person_3563600999": {
+            "facetId": "3563600999",
             "name": "Life Expectancy",
             "statVar": "LifeExpectancy_Person"
           },
@@ -165,8 +165,8 @@
             "name": "Female Life Expectancy",
             "statVar": "LifeExpectancy_Person_Female"
           },
-          "LifeExpectancy_Person_Female_3397709707": {
-            "facetId": "3397709707",
+          "LifeExpectancy_Person_Female_2776657033": {
+            "facetId": "2776657033",
             "name": "Female Life Expectancy",
             "statVar": "LifeExpectancy_Person_Female"
           },
@@ -174,8 +174,8 @@
             "name": "Male Life Expectancy",
             "statVar": "LifeExpectancy_Person_Male"
           },
-          "LifeExpectancy_Person_Male_3397709707": {
-            "facetId": "3397709707",
+          "LifeExpectancy_Person_Male_2776657033": {
+            "facetId": "2776657033",
             "name": "Male Life Expectancy",
             "statVar": "LifeExpectancy_Person_Male"
           }
@@ -193,6 +193,7 @@
   },
   "context": {},
   "debug": {},
+  "entities": [],
   "pastSourceContext": "",
   "place": {
     "dcid": "country/USA",
@@ -716,5 +717,5 @@
     ]
   },
   "svSource": "CURRENT_QUERY",
-  "userMessage": ""
+  "userMessages": []
 }

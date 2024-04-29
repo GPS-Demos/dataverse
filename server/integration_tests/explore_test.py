@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 import json
 import os
+import re
 
 from langdetect import detect as detect_lang
 import requests
@@ -44,12 +45,15 @@ class ExploreTest(NLWebServerTestCase):
                     dc='',
                     failure='',
                     test='',
-                    i18n=''):
+                    i18n='',
+                    check_detection=False,
+                    idx='',
+                    reranker=''):
     ctx = {}
     for q in queries:
       resp = requests.post(
           self.get_server_url() +
-          f'/api/explore/detect?q={q}&test={test}&i18n={i18n}&client=test_detect',
+          f'/api/explore/detect?q={q}&test={test}&i18n={i18n}&client=test_detect&idx={idx}&reranker={reranker}',
           json={
               'contextHistory': ctx,
               'dc': dc,
@@ -58,8 +62,9 @@ class ExploreTest(NLWebServerTestCase):
       if len(queries) == 1:
         d = ''
       else:
-        d = q.replace(' ', '').replace('?', '').lower()
-      self.handle_response(q, resp, test_dir, d, failure)
+        d = re.sub(r'[ ?"]', '', q).lower()
+      print(d)
+      self.handle_response(q, resp, test_dir, d, failure, check_detection)
 
   def run_detect_and_fulfill(self,
                              test_dir,
@@ -69,12 +74,14 @@ class ExploreTest(NLWebServerTestCase):
                              test='',
                              i18n='',
                              i18n_lang='',
-                             mode=''):
-    ctx = {}
+                             mode='',
+                             default_place='',
+                             idx=''):
+    ctx = []
     for (index, q) in enumerate(queries):
       resp = requests.post(
           self.get_server_url() +
-          f'/api/explore/detect-and-fulfill?q={q}&test={test}&i18n={i18n}&mode={mode}&client=test_detect-and-fulfill',
+          f'/api/explore/detect-and-fulfill?q={q}&test={test}&i18n={i18n}&mode={mode}&client=test_detect-and-fulfill&default_place={default_place}&idx={idx}',
           json={
               'contextHistory': ctx,
               'dc': dc,
@@ -83,7 +90,7 @@ class ExploreTest(NLWebServerTestCase):
       if len(queries) == 1:
         d = ''
       else:
-        d = q.replace(' ', '').replace('?', '').lower()
+        d = re.sub(r'[ ?"]', '', q).lower()
         # For some queries like Chinese, no characters are replaced and leads to unwieldy folder names.
         # Use the query index for such cases.
         if d == q and i18n:
@@ -101,7 +108,7 @@ class ExploreTest(NLWebServerTestCase):
                       test_dir,
                       test_name,
                       failure,
-                      check_place_detection=False,
+                      check_detection=False,
                       detector=None):
     dbg = resp['debug']
     resp['debug'] = {}
@@ -118,19 +125,27 @@ class ExploreTest(NLWebServerTestCase):
       json_dir = os.path.dirname(json_file)
       if not os.path.isdir(json_dir):
         os.makedirs(json_dir)
-      with open(json_file, 'w') as infile:
-        infile.write(json.dumps(resp, indent=2))
-
-      if check_place_detection:
+      if check_detection:
         dbg_file = os.path.join(json_dir, 'debug_info.json')
         with open(dbg_file, 'w') as infile:
+          del dbg["sv_matching"]["SV_to_Sentences"]
+          del dbg["props_matching"]["PROP_to_Sentences"]
           dbg_to_write = {
               "places_detected": dbg["places_detected"],
               "places_resolved": dbg["places_resolved"],
               "main_place_dcid": dbg["main_place_dcid"],
-              "main_place_name": dbg["main_place_name"]
+              "main_place_name": dbg["main_place_name"],
+              "entities_detected": dbg["entities_detected"],
+              "entities_resolved": dbg["entities_resolved"],
+              "query_with_places_removed": dbg["query_with_places_removed"],
+              "sv_matching": dbg["sv_matching"],
+              "props_matching": dbg["props_matching"],
+              "query_detection_debug_logs": dbg["query_detection_debug_logs"],
           }
           infile.write(json.dumps(dbg_to_write, indent=2))
+      else:
+        with open(json_file, 'w') as infile:
+          infile.write(json.dumps(resp, indent=2))
     else:
       if failure:
         self.assertTrue(failure in resp["failure"]), resp["failure"]
@@ -140,7 +155,7 @@ class ExploreTest(NLWebServerTestCase):
       if detector:
         self.assertTrue(dbg.get('detection_type').startswith(detector)), \
           f'Query {query} failed!'
-      if not check_place_detection:
+      if not check_detection:
         with open(json_file, 'r') as infile:
           expected = json.load(infile)
           expected['debug'] = {}
@@ -152,7 +167,7 @@ class ExploreTest(NLWebServerTestCase):
           self.maxDiff = None
           self.assertEqual(a, b)
       else:
-        # Look in the debugInfo file to match places detected.
+        # Look in the debugInfo file to match things detected.
         dbg_file = os.path.join(_dir, _TEST_DATA, test_dir, test_name,
                                 'debug_info.json')
         with open(dbg_file, 'r') as infile:
@@ -161,6 +176,37 @@ class ExploreTest(NLWebServerTestCase):
           self.assertEqual(dbg["places_resolved"], expected["places_resolved"])
           self.assertEqual(dbg["main_place_dcid"], expected["main_place_dcid"])
           self.assertEqual(dbg["main_place_name"], expected["main_place_name"])
+          self.assertEqual(dbg["entities_resolved"],
+                           expected["entities_resolved"])
+          self.assertEqual(dbg["sv_matching"]["SV"],
+                           expected["sv_matching"]["SV"])
+          self.assertEqual(dbg["query_detection_debug_logs"],
+                           expected["query_detection_debug_logs"])
+          self.assertEqual(dbg["props_matching"]["PROP"],
+                           expected["props_matching"]["PROP"])
+          self._check_multivars(dbg["sv_matching"], expected["sv_matching"])
+
+  def _check_multivars(self, got, want):
+    self.assertEqual(got['SV'][0], want['SV'][0])
+
+    got_multisv = got['MultiSV'].get('Candidates', [])
+    want_multisv = want['MultiSV'].get('Candidates', [])
+    self.assertEqual(len(want_multisv), len(got_multisv))
+    for i in range(len(want_multisv)):
+      want_parts = want_multisv[i]['Parts']
+      got_parts = got_multisv[i]['Parts']
+      self.assertEqual(len(want_parts), len(got_parts))
+      for i in range(len(got_parts)):
+        self.assertEqual(got_parts[i]['QueryPart'], want_parts[i]['QueryPart'])
+        self.assertEqual(got_parts[i]['SV'][0], want_parts[i]['SV'][0])
+
+    if not want_multisv:
+      return
+
+    if want['CosineScore'][0] > want_multisv[0]['AggCosineScore']:
+      self.assertTrue(got['CosineScore'][0] > got_multisv[0]['AggCosineScore'])
+    else:
+      self.assertTrue(got['CosineScore'][0] < got_multisv[0]['AggCosineScore'])
 
   def handle_i18n_response(self, resp, i18n_lang):
     """The translation API does not always return the same translations.
@@ -193,8 +239,33 @@ class ExploreTest(NLWebServerTestCase):
     self.run_detection('detection_api_basic', ['Commute in California'],
                        test='unittest')
 
+  def test_detection_basic_lancedb(self):
+    # NOTE: Use the same test-name as above, since we expect the content to exactly
+    # match the one from above.
+    self.run_detection('detection_api_basic', ['Commute in California'],
+                       test='unittest',
+                       idx='medium_lance_ft')
+
   def test_detection_sdg(self):
     self.run_detection('detection_api_sdg', ['Health in USA'], dc='sdg')
+
+  def test_detection_bio(self):
+    self.run_detection('detection_api_bio', [
+        'What is the phylum of volvox?',
+        'What types of genes are FGFR1, APOE, and ACHE?',
+    ],
+                       dc='bio',
+                       check_detection=True)
+
+  def test_detection_multivar(self):
+    self.run_detection('detection_api_multivar', [
+        'number of poor hispanic women with phd',
+        'compare obesity vs. poverty',
+        'show me the impact of climate change on drought',
+        'how are factors like obesity, blood pressure and asthma impacted by climate change',
+        'Compare "Male population" with "Female Population"',
+    ],
+                       check_detection=True)
 
   def test_detection_context(self):
     self.run_detection('detection_api_context', [
@@ -214,6 +285,22 @@ class ExploreTest(NLWebServerTestCase):
     # Chinese query for "which cities in the Santa Clara County have the highest larceny?"
     self.run_detection('detection_translate_chinese', ['圣克拉拉县哪些城市的盗窃率最高？'],
                        i18n='true')
+
+  def test_detection_bugs(self):
+    self.run_detection('detection_api_bugs', [
+        'What is the relationship between housing size and home prices in California'
+    ])
+
+  def test_detection_reranking(self):
+    self.run_detection(
+        'detection_api_reranking',
+        [
+            # Without reranker the top SV is Median_Income_Person,
+            # With reranking the top SV is Count_Person_IncomeOf75000OrMoreUSDollar.
+            'population that is rich in california'
+        ],
+        check_detection=True,
+        reranker='cross-encoder-mxbai-rerank-base-v1')
 
   def test_fulfillment_basic(self):
     req = {
@@ -239,6 +326,14 @@ class ExploreTest(NLWebServerTestCase):
         'dc': 'sdg'
     }
     self.run_fulfillment('fulfillment_api_sdg', req)
+
+  def test_fulfillment_undata(self):
+    req = {
+        'entities': ['country/USA'],
+        'variables': ['dc/topic/UN_THEME_1'],
+        'dc': 'undata'
+    }
+    self.run_fulfillment('fulfillment_api_undata', req)
 
   def test_fulfillment_sdg_global(self):
     req = {
@@ -375,7 +470,7 @@ class ExploreTest(NLWebServerTestCase):
         'e2e_edge_cases2',
         [
             'What crimes are considered felonies vs. misdemeanors in the US',
-            'How does school size of urban schools compare to rural schools in US',
+            'How does school size of urban schools compare to rural schools in Colorado',
             'What is the relationship between housing size and home prices in California',
 
             # This is a regression test to ensure "biggest" doesn't trigger
@@ -396,8 +491,13 @@ class ExploreTest(NLWebServerTestCase):
             'Poverty vs. unemployment rate in districts of Tamil Nadu',
         ])
 
+  def test_e2e_correlation_bugs(self):
+    self.run_detect_and_fulfill('e2e_correlation_bugs',
+                                ['diabetes vs. poor latinos in california'])
+
   def test_e2e_superlatives(self):
     self.run_detect_and_fulfill('e2e_superlatives', [
+        'asthma in Nevada',
         'Richest counties in california',
         'List schools in Sunnyvale',
     ],
@@ -418,6 +518,11 @@ class ExploreTest(NLWebServerTestCase):
         'Compare progress on poverty in Mexico, Nigeria and Pakistan'
     ],
                                 dc='sdg')
+
+  def test_e2e_undata(self):
+    self.run_detect_and_fulfill(
+        'e2e_undata', ['Culture in Iran', 'Pulmonary diseases in the world'],
+        dc='undata')
 
     self.run_detect_and_fulfill('e2e_sdg_main_dc', [
         'Hunger in Nigeria',
@@ -467,17 +572,96 @@ class ExploreTest(NLWebServerTestCase):
         ],
         mode='strict')
 
+  def test_e2e_strict_multi_sv(self):
+    self.run_detect_and_fulfill(
+        'explore_strict_multi_var',
+        [
+            # This should fulfill even though there are only multi sv candidates
+            # detected and no single svs passed the detection threshold
+            'Does obesity correlate with lack of sleep in US counties'
+        ],
+        mode='strict')
+
   def test_e2e_single_date(self):
     self.run_detect_and_fulfill('e2e_single_date', [
         'Life expectancy in US states in 2018',
         'What are the projected temperatures in california in 2025',
         'population in the US in the last year',
-        'hispanic women in California in 2001'
+        'hispanic women in California in 2001',
+        "What was the average house price for 2 br house in Mountain View decade ago"
     ])
 
   def test_e2e_date_range(self):
-    self.run_detect_and_fulfill('e2e_date_range', [
-        'Life expectancy in US states in the last 5 years',
-        'Population in California after 2013',
-        'Female population in New York before 2020'
+    self.run_detect_and_fulfill(
+        'e2e_date_range',
+        [
+            'Life expectancy in US states in the last 5 years',
+            'Population in California after 2013',
+            'Female population in New York before 2020',
+            # tests date range with map charts
+            'Female population in California counties before 2020',
+            # tests date range with scatter charts
+            'poverty vs obesity in california before 2020',
+            # tests date range with time delta
+            'Which countries in Africa have had the greatest increase in electricity access over the last 10 years?',
+            # tests date range with timeline where observation dates are lower
+            # granularity than asked for date range
+            'Female population in California since apr 2019'
+        ])
+
+  def test_e2e_default_place(self):
+    self.run_detect_and_fulfill('e2e_no_default_place_specified', [
+        'Female population',
     ])
+
+    self.run_detect_and_fulfill('e2e_default_place_india',
+                                ['Female population'],
+                                default_place='country/IND')
+
+    self.run_detect_and_fulfill('e2e_default_place_bogus',
+                                ['Female population'],
+                                default_place='abcd')
+
+  def test_e2e_correlation_simple_place(self):
+    self.run_detect_and_fulfill(
+        'e2e_correlation_simple_place',
+        [
+            # A comparison timeline chart with 2 variables.
+            'Foreign born vs. native born in Sunnyvale',
+            # No such chart because the two variables are not coplottable.
+            'Native born vs. Median income in Sunnyvale',
+        ])
+
+  def test_e2e_toolformer_mode(self):
+    self.run_detect_and_fulfill(
+        'e2e_toolformer_mode',
+        ['what is the infant mortality rate in massachusetts'],
+        mode='toolformer')
+
+  def test_e2e_triple(self):
+    self.run_detect_and_fulfill(
+        'e2e_triple',
+        [
+            # Should have 'out' properties as answer
+            'What strand orientation does FGFR1 have?',
+            # Should use context for the entity
+            'what transcripts does it have',
+            # Should use context for the property
+            'how about for P53',
+            # Should not use context because no entity or property found
+            'what animal is that found in',
+            # Should have 'in' properties as answer
+            'What is Betacoronavirus 1 the species of',
+            # Should have a chained property in the answer
+            'What genes are associated with the genetic variant rs13317?',
+            # Should return a table in the answer
+            'What genes are associated with the genetic variant rs13317 and rs7903146?',
+            # Should return a table with all the out arcs of the two entities
+            'what virus species are rs13317 and rs7903146',
+            # When there is entity and place, should not default to the entity
+            # overview tile
+            'What is the prevalence of heart disease in California',
+            # When there is only an entity, should return an entity overview tile
+            'tell me about heart disease'
+        ],
+        dc='bio')

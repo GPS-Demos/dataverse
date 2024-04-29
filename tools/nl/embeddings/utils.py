@@ -14,57 +14,66 @@
 """Common Utility functions for Embeddings."""
 
 from dataclasses import dataclass
+import itertools
+import logging
 import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Tuple
 
+from file_util import create_file_handler
+from google.cloud import aiplatform
+from google.cloud import storage
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import yaml
 
 # Col names in the input files/sheets.
 DCID_COL = 'dcid'
-
 NAME_COL = 'Name'
 DESCRIPTION_COL = 'Description'
 CURATED_ALTERNATIVES_COL = 'Curated_Alternatives'
 OVERRIDE_COL = 'Override_Alternatives'
-
 ALTERNATIVES_COL = 'Alternatives'
+
+DEFAULT_MODELS_BUCKET = 'datcom-nl-models'
 
 # Col names in the concatenated dataframe.
 COL_ALTERNATIVES = 'sentence'
 
 _EMBEDDINGS_YAML_PATH = "../../../deploy/nl/embeddings.yaml"
 _DEFAULT_EMBEDDINGS_INDEX_TYPE = "medium_ft"
-"""The embeddings filename pattern in embeddings.yaml.
 
-Expect: <embeddings_version>.<fine-tuned-model-version>.<base-model>.csv
-Example: embeddings_sdg_2023_09_12_16_38_04.ft_final_v20230717230459.all-MiniLM-L6-v2.csv
+_CHUNK_SIZE = 100
 
-Model version: <fine-tuned-model-version>.<base-model>
-Example: ft_final_v20230717230459.all-MiniLM-L6-v2
+_MODEL_ENDPOINT_RETRIES = 3
 
-If a string matches this pattern, the first group is the model version.
-"""
-_EMBEDDINGS_FILENAME_PATTERN = r"^[^.]+\.([^.]+\.[^.]+)\.csv$"
+_GCS_PATH_PREFIX = "gs://"
+
+
+def _is_gcs_path(path: str) -> bool:
+  return path.strip().startswith(_GCS_PATH_PREFIX)
+
+
+def _get_gcs_parts(gcs_path: str) -> tuple[str, str]:
+  return gcs_path[len(_GCS_PATH_PREFIX):].split('/', 1)
 
 
 @dataclass
 class Context:
-  # gspread client
-  gs: Any
   # Model
   model: Any
+  # Vertex AI model endpoint url
+  model_endpoint: aiplatform.Endpoint
   # GCS storage bucket
   bucket: Any
   # Temp dir
   tmp: str = "/tmp"
 
 
-def two_digits(number: int) -> str:
-  return str(number).zfill(2)
+def chunk_list(data, chunk_size):
+  it = iter(data)
+  return iter(lambda: tuple(itertools.islice(it, chunk_size)), ())
 
 
 def get_local_alternatives(local_filename: str,
@@ -157,37 +166,15 @@ def dedup_texts(df: pd.DataFrame) -> Tuple[Dict[str, str], List[List[str]]]:
   return (text2sv_dict, dup_sv_rows)
 
 
-def get_texts_dcids(
-    text2sv_dict: Dict[str, str]) -> Tuple[List[str], List[str]]:
-  texts = sorted(list(text2sv_dict.keys()))
-  dcids = [text2sv_dict[k] for k in texts]
-  return (texts, dcids)
-
-
-def _download_file_from_gcs(ctx: Context, file_name: str) -> str:
-  """Downloads the specified file_name from GCS to the ctx.tmp folder.
-
-  Args:
-    ctx: Context which has the GCS bucket information.
-    file_name: the GCS bucket name for the file.
-  
-  Returns the path to the local directory where the file was downloaded to.
-  ```
-  """
-  local_file_path = os.path.join(ctx.tmp, file_name)
-  blob = ctx.bucket.get_blob(file_name)
-  blob.download_to_filename(local_file_path)
-  return local_file_path
-
-
 def _download_model_from_gcs(ctx: Context, model_folder_name: str) -> str:
-  # TODO: deprecate this in favor of the function  in nl_server.gcs
+  # TODO: Move download_folder from nl_server.gcs to shared.lib.gcs
+  # and then use that function instead of this one.
   """Downloads a Sentence Tranformer model (or finetuned version) from GCS.
 
   Args:
     ctx: Context which has the GCS bucket information.
     model_folder_name: the GCS bucket name for the model.
-  
+
   Returns the path to the local directory where the model was downloaded to.
   The downloaded model can then be loaded as:
 
@@ -196,7 +183,7 @@ def _download_model_from_gcs(ctx: Context, model_folder_name: str) -> str:
       model = SentenceTransformer(downloaded_model_path)
   ```
   """
-  local_dir = ctx.tmp
+  local_dir = os.path.join(ctx.tmp, DEFAULT_MODELS_BUCKET)
   # Get list of files
   blobs = ctx.bucket.list_blobs(prefix=model_folder_name)
   for blob in blobs:
@@ -213,34 +200,44 @@ def _download_model_from_gcs(ctx: Context, model_folder_name: str) -> str:
   return os.path.join(local_dir, model_folder_name)
 
 
-def build_embeddings(ctx, texts: List[str], dcids: List[str]) -> pd.DataFrame:
+def build_embeddings(ctx, text2sv: Dict[str, str]) -> pd.DataFrame:
   """Builds the embeddings dataframe.
-  
-  Texts and dcids should be of equal length such that
-  a text at a given index corresponds to the dcid at that index.
 
   The output dataframe contains the embeddings columns (typically 384) + dcid + sentence.
   """
-  assert len(texts) == len(dcids)
+  texts = sorted(list(text2sv.keys()))
 
-  embeddings = ctx.model.encode(texts, show_progress_bar=True)
+  if ctx.model:
+    embeddings = ctx.model.encode(texts, show_progress_bar=True)
+  else:
+    embeddings = []
+    for i, chuck in enumerate(chunk_list(texts, _CHUNK_SIZE)):
+      logging.info('texts %d to %d', i * _CHUNK_SIZE, (i + 1) * _CHUNK_SIZE - 1)
+      for i in range(_MODEL_ENDPOINT_RETRIES):
+        try:
+          resp = ctx.model_endpoint.predict(instances=chuck,
+                                            timeout=600).predictions
+          embeddings.extend(resp)
+          break
+        except Exception as e:
+          logging.info('Exception %s', e)
   embeddings = pd.DataFrame(embeddings)
-  embeddings[DCID_COL] = dcids
+  embeddings[DCID_COL] = [text2sv[t] for t in texts]
   embeddings[COL_ALTERNATIVES] = texts
   return embeddings
 
 
 def get_or_download_model_from_gcs(ctx: Context, model_version: str) -> str:
   """Returns the local model path, downloading it if needed.
-  
+
   If the model is already downloaded, it returns the model path.
   Otherwise, it downloads the model to the local file system and returns that path.
   """
-  tuned_model_path: str = ""
+  tuned_model_path: str = os.path.join(ctx.tmp, DEFAULT_MODELS_BUCKET,
+                                       model_version)
 
   # Check if this model is already downloaded locally.
-  if os.path.exists(os.path.join(ctx.tmp, model_version)):
-    tuned_model_path = os.path.join(ctx.tmp, model_version)
+  if os.path.exists(tuned_model_path):
     print(f"Model already downloaded at path: {tuned_model_path}")
   else:
     print(
@@ -252,40 +249,20 @@ def get_or_download_model_from_gcs(ctx: Context, model_version: str) -> str:
   return tuned_model_path
 
 
-def get_or_download_file_from_gcs(ctx: Context, file_name: str) -> str:
-  """Returns the local file path, downloading it if needed.
-  
-  If the file is already downloaded, it returns the file path.
-  Otherwise, it downloads the file from GCS to the local file system and returns that path.
-  """
-  local_file_path: str = os.path.join(ctx.tmp, file_name)
-
-  # Check if this model is already downloaded locally.
-  if os.path.exists(local_file_path):
-    print(f"File already downloaded at path: {local_file_path}")
-  else:
-    print(
-        f"File not previously downloaded locally. Downloading from GCS: {file_name}"
-    )
-    local_file_path = _download_file_from_gcs(ctx, file_name)
-    print(f"File downloaded locally to: {local_file_path}")
-
-  return local_file_path
-
-
 def get_ft_model_from_gcs(ctx: Context,
                           model_version: str) -> SentenceTransformer:
   model_path = get_or_download_model_from_gcs(ctx, model_version)
   return SentenceTransformer(model_path)
 
 
+def _get_default_ft_model_version(embeddings_yaml_file_path: str) -> str:
+  """Gets the default index's (i.e. 'medium_ft') model version from embeddings.yaml.
+  """
+  return _get_default_ft_embeddings_info(embeddings_yaml_file_path)["model"]
+
+
 def get_default_ft_model_version() -> str:
   """Gets the default index's (i.e. 'medium_ft') model version from embeddings.yaml.
-  
-  It will raise an error if the file or default index is not found or
-  if the value does not conform to the pattern:
-  <embeddings_version>.<fine-tuned-model-version>.<base-model>.csv
-  Example: embeddings_sdg_2023_09_12_16_38_04.ft_final_v20230717230459.all-MiniLM-L6-v2.csv
   """
   return _get_default_ft_model_version(_EMBEDDINGS_YAML_PATH)
 
@@ -293,10 +270,15 @@ def get_default_ft_model_version() -> str:
 def get_default_ft_embeddings_file_name() -> str:
   """Gets the default index's (i.e. 'medium_ft') embeddings file name from embeddings.yaml.
   """
-  return _get_default_ft_embeddings_file_name(_EMBEDDINGS_YAML_PATH)
+  return get_default_ft_embeddings_info()["embeddings"]
 
 
-def _get_default_ft_embeddings_file_name(embeddings_yaml_file_path: str) -> str:
+def get_default_ft_embeddings_info() -> dict[str, str]:
+  return _get_default_ft_embeddings_info(_EMBEDDINGS_YAML_PATH)
+
+
+def _get_default_ft_embeddings_info(
+    embeddings_yaml_file_path: str) -> dict[str, str]:
   with open(embeddings_yaml_file_path, "r") as f:
     data = yaml.full_load(f)
     if _DEFAULT_EMBEDDINGS_INDEX_TYPE not in data:
@@ -304,20 +286,19 @@ def _get_default_ft_embeddings_file_name(embeddings_yaml_file_path: str) -> str:
     return data[_DEFAULT_EMBEDDINGS_INDEX_TYPE]
 
 
-def _get_default_ft_model_version(embeddings_yaml_file_path: str) -> str:
-  embeddings_file_name = _get_default_ft_embeddings_file_name(
-      embeddings_yaml_file_path)
-  matcher = re.match(_EMBEDDINGS_FILENAME_PATTERN, embeddings_file_name)
-  if not matcher:
-    raise ValueError(
-        f"Invalid embeddings filename value: {embeddings_file_name}")
-  return matcher.group(1)
+def save_embeddings_yaml_with_only_default_ft_embeddings(
+    embeddings_yaml_file_path: str, default_ft_embeddings_info: dict[str, str]):
+  data = {_DEFAULT_EMBEDDINGS_INDEX_TYPE: default_ft_embeddings_info}
+  with open(embeddings_yaml_file_path, "w") as f:
+    yaml.dump(data, f)
 
 
 def validate_embeddings(embeddings_df: pd.DataFrame,
                         output_dcid_sentences_filepath: str) -> None:
   # Verify that embeddings were created for all DCIDs and Sentences.
-  dcid_sentence_df = pd.read_csv(output_dcid_sentences_filepath).fillna("")
+  dcid_sentence_df = pd.read_csv(
+      create_file_handler(
+          output_dcid_sentences_filepath).read_string_io()).fillna("")
   sentences = set()
   for alts in dcid_sentence_df["sentence"].values:
     for s in alts.split(";"):

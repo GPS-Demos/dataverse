@@ -31,6 +31,10 @@ import requests
 
 from nl_server import gcs
 from nl_server.embeddings import Embeddings
+from nl_server.model.sentence_transformer import LocalSentenceTransformerModel
+from nl_server.search import search_vars
+from nl_server.store.memory import MemoryEmbeddingsStore
+from shared.lib.detected_variables import VarCandidates
 
 _SV_THRESHOLD = 0.5
 _NUM_SVS = 10
@@ -51,6 +55,7 @@ flags.DEFINE_string('queryset', '', 'Full path to queryset CSV')
 flags.DEFINE_string('indextype', '',
                     'The base index type such as small or medium_ft')
 
+_GCS_PREFIX = 'https://storage.mtls.cloud.google.com'
 _TEMPLATE = 'tools/nl/svindex_differ/template.html'
 _REPORT = '/tmp/diff_report.html'
 _FILE_PATTERN_EMBEDDINGS = r'embeddings_.*_\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}\.csv'
@@ -79,19 +84,18 @@ def _get_sv_names(sv_dcids):
   return result
 
 
-def _prune(res):
+def _prune(res: VarCandidates):
   svs = []
   sv_info = {}
-  for i in range(len(res['SV'])):
-    score = res['CosineScore'][i]
+  for i, var in enumerate(res.svs):
+    score = res.scores[i]
     if i < _NUM_SVS and score >= _SV_THRESHOLD:
-      sv = res['SV'][i]
-      svs.append(sv)
-      sv_info[sv] = {
-          'sv': sv,
+      svs.append(var)
+      sv_info[var] = {
+          'sv': var,
           'rank': i + 1,
           'score': score,
-          'sentence_scores': res['SV_to_Sentences'].get(sv, [])
+          'sentence_scores': res.sv2sentences[var],
       }
   return svs, sv_info
 
@@ -136,8 +140,9 @@ def _get_diff_table(diff_list, base_sv_info, test_sv_info):
       continue
     # If theres no + or -, that means this line is the same in both base and test.
     elif not diff.startswith('+') and not diff.startswith('-'):
-      info = base_sv_info.get(diff_sv, test_sv_info.get(diff_sv, {}))
-      diff_table_rows.append((info, info))
+      base_info = base_sv_info.get(diff_sv, {})
+      test_info = test_sv_info.get(diff_sv, {})
+      diff_table_rows.append((base_info, test_info))
     # If the line starts with -, this means it was present in base but not in test.
     elif diff.startswith('-'):
       base_info = base_sv_info.get(diff_sv, {})
@@ -178,7 +183,7 @@ def _extract_model_name(embeddings_name: str, embeddings_file_path: str) -> str:
     parts = embeddings_name.split(".")
     model_name = ".".join(parts[1:-1])
     print(f"finetuned model_name: {model_name}")
-    model_path = gcs.download_model_folder(model_name)
+    model_path = gcs.download_folder(model_name)
 
     assert "ft_final" in model_path
     assert len(model_path.split(".")) >= 2
@@ -195,12 +200,14 @@ def run_diff(base_file, test_file, base_model_path, test_model_path, query_file,
   print(
       f"Setting up the Base Embeddings from: {base_file}; Base model from: {base_model_path}"
   )
-  base = Embeddings(base_file, base_model_path)
+  base = Embeddings(model=LocalSentenceTransformerModel(base_model_path),
+                    store=MemoryEmbeddingsStore(base_file))
   print("=================================")
   print(
       f"Setting up the Test Embeddings from: {test_file}; Test model from: {test_model_path}"
   )
-  test = Embeddings(test_file, test_model_path)
+  test = Embeddings(model=LocalSentenceTransformerModel(test_model_path),
+                    store=MemoryEmbeddingsStore(test_file))
   print("=================================")
 
   # Get the list of diffs
@@ -214,8 +221,8 @@ def run_diff(base_file, test_file, base_model_path, test_model_path, query_file,
       if not query or query.startswith('#') or query.startswith('//'):
         continue
       assert ';' not in query, 'Multiple query not yet supported'
-      base_svs, base_sv_info = _prune(base.detect_svs(query))
-      test_svs, test_sv_info = _prune(test.detect_svs(query))
+      base_svs, base_sv_info = _prune(search_vars([base], query)[query])
+      test_svs, test_sv_info = _prune(search_vars([test], query)[query])
       for sv in base_svs + test_svs:
         all_svs.add(sv)
       if base_svs != test_svs:
@@ -248,7 +255,7 @@ def run_diff(base_file, test_file, base_model_path, test_model_path, query_file,
   # Since the files can be fairly large, use a 10min timeout to be safe.
   blob.upload_from_filename(output_file, timeout=600)
   print("Done uploading to gcs.")
-  print(f"\t Diff report Filename: {gcs_filename}")
+  print(f"\t Diff report Filename: {_GCS_PREFIX}/{_GCS_BUCKET}/{gcs_filename}")
 
 
 def main(_):

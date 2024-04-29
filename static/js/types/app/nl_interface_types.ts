@@ -18,7 +18,8 @@
  * Types for the NL interface.
  */
 
-import { NamedTypedPlace } from "../../shared/types";
+import { Node } from "../../shared/api_response_types";
+import { NamedNode, NamedTypedPlace } from "../../shared/types";
 import { SubjectPageConfig } from "../../types/subject_page_proto_types";
 
 export interface PlaceFallback {
@@ -58,6 +59,12 @@ export interface SVScores {
   MultiSV: MultiSVScores;
 }
 
+export interface SentenceScore {
+  sentence: string;
+  score: number;
+  rerankScore: number;
+}
+
 export interface DebugInfo {
   status: string;
   blocked?: boolean;
@@ -68,7 +75,7 @@ export interface DebugInfo {
   mainPlaceName: string;
   queryWithoutPlaces: string;
   svScores: SVScores;
-  svSentences: Map<string, Array<string>>;
+  svSentences: Map<string, Array<SentenceScore>>;
   rankingClassification: string;
   generalClassification: string;
   sizeTypeClassification: string;
@@ -80,6 +87,6 @@ export interface DebugInfo {
 }
 
 export interface UserMessageInfo {
-  msg: string;
+  msgList: string[];
   showForm: boolean;
 }

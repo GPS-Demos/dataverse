@@ -28,7 +28,7 @@ import {
 } from "../../types/ranking_unit_types";
 import { RankingTileSpec } from "../../types/subject_page_proto_types";
 import { getHash } from "../../utils/app/visualization_utils";
-import { formatString, getSourcesJsx } from "../../utils/tile_utils";
+import { formatString, TileSources } from "../../utils/tile_utils";
 import { NlChartFeedback } from "../nl_feedback";
 import { RankingUnit } from "../ranking_unit";
 import { ChartFooter } from "./chart_footer";
@@ -42,9 +42,8 @@ interface SvRankingUnitsProps {
     chartWidth: number,
     chartHeight: number,
     chartHtml: string,
-    rankingPoints: RankingPoint[],
-    sources: string[],
-    svNames: string[]
+    chartTitle: string,
+    sources: string[]
   ) => void;
   statVar: string;
   entityType: string;
@@ -55,6 +54,9 @@ interface SvRankingUnitsProps {
   hideFooter?: boolean;
   onHoverToggled?: (placeDcid: string, hover: boolean) => void;
   errorMsg?: string;
+  footnote?: string;
+  // Optional: Override sources for this tile
+  sources?: string[];
 }
 
 /**
@@ -71,7 +73,7 @@ export function SvRankingUnits(props: SvRankingUnitsProps): JSX.Element {
   /**
    * Build content and triggers export modal window
    */
-  function handleEmbed(isHighest: boolean): void {
+  function handleEmbed(isHighest: boolean, chartTitle: string): void {
     let chartHtml = "";
     let chartHeight = 0;
     let chartWidth = 0;
@@ -90,12 +92,11 @@ export function SvRankingUnits(props: SvRankingUnitsProps): JSX.Element {
       chartWidth,
       chartHeight,
       chartHtml,
-      points,
-      Array.from(rankingGroup.sources),
-      rankingGroup.svName
+      chartTitle,
+      props.sources || Array.from(rankingGroup.sources)
     );
   }
-
+  const chartTitle = getChartTitle(title, rankingGroup);
   return (
     <React.Fragment>
       {rankingMetadata.showHighestLowest || props.errorMsg ? (
@@ -110,16 +111,20 @@ export function SvRankingUnits(props: SvRankingUnitsProps): JSX.Element {
             props.apiRoot,
             highestRankingUnitRef,
             props.onHoverToggled,
-            props.errorMsg
+            props.errorMsg,
+            props.sources
           )}
           {!props.hideFooter && (
             <ChartFooter
-              handleEmbed={props.errorMsg ? null : () => handleEmbed(true)}
+              handleEmbed={
+                props.errorMsg ? null : () => handleEmbed(true, chartTitle)
+              }
               exploreLink={
                 props.showExploreMore && !props.errorMsg
                   ? getExploreLink(props, true)
                   : null
               }
+              footnote={props.footnote}
             >
               <NlChartFeedback id={props.tileId} />
             </ChartFooter>
@@ -138,14 +143,17 @@ export function SvRankingUnits(props: SvRankingUnitsProps): JSX.Element {
                 true,
                 props.apiRoot,
                 highestRankingUnitRef,
-                props.onHoverToggled
+                props.onHoverToggled,
+                undefined,
+                props.sources
               )}
               {!props.hideFooter && (
                 <ChartFooter
-                  handleEmbed={() => handleEmbed(true)}
+                  handleEmbed={() => handleEmbed(true, chartTitle)}
                   exploreLink={
                     props.showExploreMore ? getExploreLink(props, true) : null
                   }
+                  footnote={props.footnote}
                 >
                   <NlChartFeedback id={props.tileId} />
                 </ChartFooter>
@@ -163,14 +171,17 @@ export function SvRankingUnits(props: SvRankingUnitsProps): JSX.Element {
                 false,
                 props.apiRoot,
                 lowestRankingUnitRef,
-                props.onHoverToggled
+                props.onHoverToggled,
+                undefined,
+                props.sources
               )}
               {!props.hideFooter && (
                 <ChartFooter
-                  handleEmbed={() => handleEmbed(false)}
+                  handleEmbed={() => handleEmbed(false, chartTitle)}
                   exploreLink={
                     props.showExploreMore ? getExploreLink(props, false) : null
                   }
+                  footnote={props.footnote}
                 >
                   <NlChartFeedback id={props.tileId} />
                 </ChartFooter>
@@ -216,6 +227,26 @@ export function getRankingUnitTitle(
 }
 
 /**
+ * Returns title of overall chart
+ *
+ * @param tileConfigTitle Title from tile with format strings.
+ * @param rankingGroup Chart ranking group
+ * @returns formatted title
+ */
+function getChartTitle(tileConfigTitle: string, rankingGroup: RankingGroup) {
+  const rs = {
+    date: rankingGroup.dateRange,
+    placeName: "",
+  };
+  // Use tile config title if specified
+  if (tileConfigTitle) {
+    return formatString(tileConfigTitle, rs);
+  }
+  // Otherwise variable names joined together
+  return rankingGroup.svName.join(", ");
+}
+
+/**
  * Gets the top points and bottom points to display in a ranking unit
  * @param rankingMetadata the RankingTileSpec to get the points for
  * @param isHighest whether or not this ranking unit is showing the points as
@@ -251,6 +282,9 @@ export function getRankingUnitPoints(
  * @param rankingMetadata the RankingTileSpec to get the ranking unit for
  * @param isHighest whether or not this ranking unit is showing highest
  * @param rankingUnitRef ref object to attach to the ranking unit
+ * @param onHoverToggled callback when user hovers over a row
+ * @param errorMsg Erorr message
+ * @param sources Optional: Override sources list with this list of  URLs
  */
 export function getRankingUnit(
   tileConfigTitle: string,
@@ -262,7 +296,8 @@ export function getRankingUnit(
   apiRoot: string,
   rankingUnitRef?: RefObject<HTMLDivElement>,
   onHoverToggled?: (placeDcid: string, hover: boolean) => void,
-  errorMsg?: string
+  errorMsg?: string,
+  sources?: string[]
 ): JSX.Element {
   const { topPoints, bottomPoints } = getRankingUnitPoints(
     rankingMetadata,
@@ -291,7 +326,11 @@ export function getRankingUnit(
         rankingMetadata.showMultiColumn ? rankingGroup.svName : undefined
       }
       onHoverToggled={onHoverToggled}
-      headerChild={errorMsg ? null : getSourcesJsx(rankingGroup.sources)}
+      headerChild={
+        errorMsg ? null : (
+          <TileSources sources={sources || rankingGroup.sources} />
+        )
+      }
       errorMsg={errorMsg}
       apiRoot={apiRoot}
       entityType={entityType}
