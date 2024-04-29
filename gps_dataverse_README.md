@@ -1,5 +1,15 @@
 # Local Development
+
 > WARNING! Has not been tested yet. May need to edit the `./run_server.sh` command to properly include `.env.list` variables
+
+## Submodules
+
+```bash
+git submodule foreach git pull origin master
+git submodule update --init --recursive
+```
+
+## Local Setup
 
 Install Docker or use Cloud Shell
 
@@ -15,7 +25,7 @@ You'll need to create a `custom_dc/.env.list` file for sensitive environment var
 ./run_server.sh -e gps_dataverse
 ```
 
-# Building and Run an Image
+# Building and Running an Image
 
 ```bash
 export SERVICE=datacommons-website-compose
@@ -43,6 +53,7 @@ $LOCAL_IMAGE
 # Deployment
 
 ## Tag and Push the Image
+
 Build the image with the commands mentioned above. Then authenticate to push with Docker
 
 ```bash
@@ -51,6 +62,7 @@ gcloud auth configure-docker $REGION-docker.pkg.dev
 ```
 
 - Tag the image
+
 ```bash
 export CUSTOM_DC_TAG=gps_dataverse
 export PROJECT_ID=gps-dataverse
@@ -67,6 +79,7 @@ docker push $REMOTE_IMAGE
 ```
 
 ## Deploy the Built Image
+
 In GCP IAM, grant the default service account "Cloud SQL Editor" permission. Then run:
 
 ```bash
@@ -88,7 +101,9 @@ gcloud run deploy $RUN_SERVICE \
 ```
 
 # Appendix
+
 ## Set Up Google Artifact Registry (one time)
+
 ```bash
 export PROJECT_ID=gps-dataverse
 export REGION=us-central1
@@ -103,6 +118,7 @@ gcloud artifacts repositories create $REGISTRY \
 ```
 
 ## DNS and Global Load Balancer
+
 [Documentation](https://cloud.google.com/run/docs/integrate/custom-domain-load-balancer#command-line)
 
 You must grant the Default Service Account the following IAM roles before proceeding:
@@ -133,5 +149,3 @@ export REGION=us-central1
 gcloud beta run integrations describe custom-domains \
   --region $REGION
 ```
-
-
