@@ -2,20 +2,22 @@
 
 > WARNING! Has not been tested yet. May need to edit the `./run_server.sh` command to properly include `.env.list` variables
 
-## Submodules
+Install Docker or use Cloud Shell
+
+## Local Setup
+
+### Submodules
 
 ```bash
 git submodule foreach git pull origin master
 git submodule update --init --recursive
 ```
 
-## Local Setup
-
-Install Docker or use Cloud Shell
+### Environment Variables
 
 You'll need to create a `custom_dc/.env.list` file for sensitive environment variables (DO NOT COMMIT TO SCM).
 
-`cp custom_dc/gps_dataverse.env.list custom_dc/.env.list`
+`cp custom_dc/gps_dataverse_[dev|prod].env.list custom_dc/.env.list`
 
 - Edit `.env.list` to add sensitive variables from [here](https://console.cloud.google.com/security/secret-manager?project=gps-dataverse)
   - `MAPS_API_KEY`
@@ -25,7 +27,7 @@ You'll need to create a `custom_dc/.env.list` file for sensitive environment var
 ./run_server.sh -e gps_dataverse
 ```
 
-# Building and Running an Image
+## Building and Running an Image
 
 ```bash
 export SERVICE=datacommons-website-compose
@@ -46,13 +48,12 @@ docker run -it \
 $LOCAL_IMAGE
 ```
 
-
 - Visit `localhost:8080`
 - Some changes can be seen with a simple `docker restart $(docker ps --format '{{.ID}}')`; other changes require a full rebuild
 
-# Deployment
+## Deployment
 
-## Tag and Push the Image
+### Tag and Push the Image
 
 Build the image with the commands mentioned above. Then authenticate to push with Docker
 
@@ -64,8 +65,8 @@ gcloud auth configure-docker $REGION-docker.pkg.dev
 - Tag the image
 
 ```bash
-export CUSTOM_DC_TAG=gps_dataverse
 export PROJECT_ID=gps-dataverse
+export CUSTOM_DC_TAG=gps_dataverse
 export REGION=us-central1
 
 export REGISTRY=datacommons
@@ -78,7 +79,7 @@ docker tag $LOCAL_IMAGE $REMOTE_IMAGE
 docker push $REMOTE_IMAGE
 ```
 
-## Deploy the Built Image
+### Deploy the Built Image
 
 In GCP IAM, grant the default service account "Cloud SQL Editor" permission. Then run:
 
@@ -100,9 +101,9 @@ gcloud run deploy $RUN_SERVICE \
 #  --add-cloudsql-instances=<project>:<region>:dc-graph \
 ```
 
-# Appendix
+## Appendix
 
-## Set Up Google Artifact Registry (one time)
+### Set Up Google Artifact Registry (one time)
 
 ```bash
 export PROJECT_ID=gps-dataverse
@@ -117,7 +118,7 @@ gcloud artifacts repositories create $REGISTRY \
   --async
 ```
 
-## DNS and Global Load Balancer
+### DNS and Global Load Balancer
 
 [Documentation](https://cloud.google.com/run/docs/integrate/custom-domain-load-balancer#command-line)
 
