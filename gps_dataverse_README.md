@@ -24,6 +24,10 @@ You'll need to create a `custom_dc/.env.list` file for sensitive environment var
   - `DC_API_KEY` 
 
 ```bash
+virtualenv .env
+source .env/bin/activate
+pip install -r server/requirements.txt
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 ./run_server.sh -e gps_dataverse
 ```
 
@@ -65,7 +69,7 @@ gcloud auth configure-docker $REGION-docker.pkg.dev
 - Tag the image
 
 ```bash
-export PROJECT_ID=gps-dataverse
+export PROJECT_ID=gps-dataverse-dev
 export CUSTOM_DC_TAG=gps_dataverse
 export REGION=us-central1
 
@@ -96,9 +100,9 @@ gcloud run deploy $RUN_SERVICE \
   --memory 8G \
   --image $REMOTE_IMAGE \
   --set-env-vars="$env_vars" \
+  --add-cloudsql-instances=$PROJECT_ID:$REGION:dc-graph \
+  --max-instances 5 \
   --port 8080
-
-#  --add-cloudsql-instances=<project>:<region>:dc-graph \
 ```
 
 ## Appendix
