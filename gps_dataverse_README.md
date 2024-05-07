@@ -70,14 +70,16 @@ gcloud auth configure-docker $REGION-docker.pkg.dev
 
 ```bash
 export PROJECT_ID=gps-dataverse-dev
-export CUSTOM_DC_TAG=gps_dataverse
+# export CUSTOM_DC_TAG=gps_dataverse
+# export CUSTOM_DC_TAG=latest
 export REGION=us-central1
 
 export REGISTRY=datacommons
 export SERVICE=datacommons-website-compose
 export TAG=latest
 export LOCAL_IMAGE=$SERVICE:$TAG
-export REMOTE_IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REGISTRY/$SERVICE:$CUSTOM_DC_TAG
+export REMOTE_IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REGISTRY/$SERVICE:$TAG
+# export REMOTE_IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REGISTRY/$SERVICE:$CUSTOM_DC_TAG
 
 docker tag $LOCAL_IMAGE $REMOTE_IMAGE
 docker push $REMOTE_IMAGE
@@ -89,20 +91,26 @@ In GCP IAM, grant the default service account "Cloud SQL Editor" permission. The
 
 ```bash
 # Then env file is "custom_dc/.env.list"
+# export NETWORK=dataverse-vpc
+# export SUBNET=central
+
 export RUN_SERVICE=datacommons
 env_vars=$(awk -F '=' 'NF==2 {print $1"="$2}' custom_dc/.env.list | tr '\n' ',' | sed 's/,$//')
 
-gcloud run deploy $RUN_SERVICE \
+gcloud beta run deploy $RUN_SERVICE \
+  --image $REMOTE_IMAGE \
   --allow-unauthenticated \
   --region $REGION \
-  --min-instances 1 \
   --cpu 2 \
   --memory 8G \
-  --image $REMOTE_IMAGE \
-  --set-env-vars="$env_vars" \
-  --add-cloudsql-instances=$PROJECT_ID:$REGION:dc-graph \
+  --min-instances 1 \
   --max-instances 5 \
-  --port 8080
+  --set-env-vars="$env_vars" \
+  --port 8080 
+
+  # --add-cloudsql-instances=$PROJECT_ID:$REGION:dc-graph \
+  # --network $NETWORK \
+  # --subnet $SUBNET \
 ```
 
 ## Appendix
@@ -110,7 +118,7 @@ gcloud run deploy $RUN_SERVICE \
 ### Set Up Google Artifact Registry (one time)
 
 ```bash
-export PROJECT_ID=gps-dataverse
+export PROJECT_ID=gps-dataverse-dev
 export REGION=us-central1
 export REGISTRY=datacommons
 
@@ -118,9 +126,32 @@ gcloud artifacts repositories create $REGISTRY \
   --project=$PROJECT_ID \
   --repository-format=docker \
   --location=$REGION \
-  --immutable-tags \
   --async
 ```
+
+### Private IP for Cloud SQL
+
+Create a VPC with a subnet in the same region as the Cloud SQL instance. Then, create a private IP for the Cloud SQL instance.
+
+Create a [VPC peering connection](https://cloud.google.com/sql/docs/mysql/connect-instance-cloud-run#expandable-2) between the VPC and the `google-managed-services-default` network.
+
+
+Create a [VPC connector](https://cloud.google.com/run/docs/configuring/vpc-connectors) for Cloud Run to access the VPC
+
+```bash
+export NETWORK=dataverse-vpc
+export REGION=us-central1
+export VPC_CONNECTOR_NAME=serverless-vpc-access
+
+gcloud compute networks vpc-access connectors create $VPC_CONNECTOR_NAME \
+--network $NETWORK \
+--region $REGION \
+--range 10.8.0.0/24
+```
+
+### Connect Cloud Run to Cloud SQL (via public IP)
+
+https://cloud.google.com/sql/docs/mysql/connect-instance-cloud-run#expandable-3
 
 ### DNS and Global Load Balancer
 
