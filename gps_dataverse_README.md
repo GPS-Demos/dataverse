@@ -1,8 +1,10 @@
 # Local Development
 
-> WARNING! Has not been tested yet. May need to edit the `./run_server.sh` command to properly include `.env.list` variables
+## Keeping fork up to date
 
-Install Docker or use Cloud Shell
+- Don't edit any existing files. Only add new files.
+- Follow [these steps](https://stackoverflow.com/questions/21353656/merge-git-repo-into-branch-of-another-repo) to merge the main repo into the your repo
+- Run the Local Setup > Submodules commands any time you make changes to ensure you have the latest
 
 ## Local Setup
 
