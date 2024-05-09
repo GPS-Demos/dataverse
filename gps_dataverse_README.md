@@ -72,16 +72,12 @@ gcloud auth configure-docker $REGION-docker.pkg.dev
 
 ```bash
 export PROJECT_ID=gps-dataverse-dev
-# export CUSTOM_DC_TAG=gps_dataverse
-# export CUSTOM_DC_TAG=latest
 export REGION=us-central1
-
 export REGISTRY=datacommons
 export SERVICE=datacommons-website-compose
 export TAG=latest
 export LOCAL_IMAGE=$SERVICE:$TAG
 export REMOTE_IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REGISTRY/$SERVICE:$TAG
-# export REMOTE_IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REGISTRY/$SERVICE:$CUSTOM_DC_TAG
 
 docker tag $LOCAL_IMAGE $REMOTE_IMAGE
 docker push $REMOTE_IMAGE
@@ -97,20 +93,22 @@ In GCP IAM, grant the default service account "Cloud SQL Editor" permission. The
 # export SUBNET=central
 
 export RUN_SERVICE=datacommons
-env_vars=$(awk -F '=' 'NF==2 {print $1"="$2}' custom_dc/.env.list | tr '\n' ',' | sed 's/,$//')
+export env_vars=$(awk -F '=' 'NF==2 {print $1"="$2}' custom_dc/.env.list | tr '\n' ',' | sed 's/,$//')
 
 gcloud beta run deploy $RUN_SERVICE \
   --image $REMOTE_IMAGE \
   --allow-unauthenticated \
   --region $REGION \
-  --cpu 2 \
-  --memory 8G \
+  --add-cloudsql-instances=$PROJECT_ID:$REGION:dc-graph \
   --min-instances 1 \
   --max-instances 5 \
+  --cpu 2 \
+  --memory 8Gi \
+  --cpu-boost \
+  --no-cpu-throttling \
   --set-env-vars="$env_vars" \
-  --port 8080 
+  --port 8080
 
-  # --add-cloudsql-instances=$PROJECT_ID:$REGION:dc-graph \
   # --network $NETWORK \
   # --subnet $SUBNET \
 ```
@@ -187,3 +185,18 @@ export REGION=us-central1
 gcloud beta run integrations describe custom-domains \
   --region $REGION
 ```
+
+
+1. New project
+2. Create artifact registry
+   1. Enable API
+3. Push image to artifact registry
+4. Disable Org Policy: iam.allowedPolicyMemberDomains
+5. Deploy Cloud Run service
+   1. Enable API
+6. Create Maps API key
+   1. Enable Places API
+      1. Counsel approval
+   2. Enable Maps JavaScript API
+   3. Two APIs: Maps JavaScript API and Places API
+   4. Add authorized domains
