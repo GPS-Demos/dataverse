@@ -1,5 +1,5 @@
 #GCP project id where the DC website will be installed in.
-#project_id =""
+project_id ="gps-dataverse-468813"
 
 #Contact email for domain. Must be a valid email and will be used for activating the domain.
 #contact_email=""
