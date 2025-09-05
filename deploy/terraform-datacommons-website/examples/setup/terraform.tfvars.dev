@@ -8,7 +8,7 @@ project_id ="gps-dataverse-dev-468813"
 #website_robot_account_id=""
 
 #Enabling this flag will register a new domain in Cloud Domains and configure the DNS in Cloud DNS.
-#register_domain=
+register_domain=true
 
 #Custom DC website domain to register. Will be ignored if register_domain is false.
 #dc_website_domain=
