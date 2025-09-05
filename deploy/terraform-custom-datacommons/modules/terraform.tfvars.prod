@@ -18,7 +18,7 @@
 #  - [Optional] Add any additional variable values from variables.tf definition
 
 # User's GCP project
-project_id  = "gps-dataverse-dev-468813"
+project_id  = "gps-dataverse-468813"
 
 region = "us-central1"
 
@@ -26,7 +26,7 @@ region = "us-central1"
 # value "dev" results in resources like "dev-datacommons-web-service" and
 # "dev-datacommons-data-job". This ensures unique names when deploying the
 # module multiple times in the same GCP account.
-namespace   = "dataverse-dev"
+namespace   = "gps-dataverse"
 
 # Data Commons API key. See https://docs.datacommons.org/custom_dc/quickstart.html#prerequisites
 dc_api_key = "gps-dataverse-api-key"
