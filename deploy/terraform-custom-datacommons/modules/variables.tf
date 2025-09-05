@@ -166,13 +166,13 @@ variable "dc_web_service_max_instance_count" {
 variable "dc_web_service_cpu" {
   description = "CPU limit for the Data Commons service container"
   type        = string
-  default     = "4"
+  default     = "2"
 }
 
 variable "dc_web_service_memory" {
   description = "Memory limit for the Data Commons service container"
   type        = string
-  default     = "16G"
+  default     = "8Gi"
 }
 
 variable "make_dc_web_service_public" {
