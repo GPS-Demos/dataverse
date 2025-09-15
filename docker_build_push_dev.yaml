@@ -1,0 +1,32 @@
+steps:
+# Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'build',
+    '-f', 'build/web_compose/Dockerfile',
+    '-t', '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}',
+    '.'
+  ]
+
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'push',
+    '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}',
+  ]
+
+images:
+- '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${_TAG}'
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Substitutions can be overridden at build time
+substitutions:
+  _LOCATION: 'us-central1'  # Specify the Artifact Registry location
+  _REPOSITORY: 'gps-dataverse-dev-468813-artifacts' # Your Artifact Registry repository name
+  _IMAGE_NAME: 'datacommons-website-compose'       # Your image name
+ # _PROJECT_ID: 'gps-dataverse-dev-468813'
+ # _REGION: 'us-central1'
+  _TAG: 'latest'
+
+#LOCAL_IMAGE=$SERVICE:$TAG
+#REMOTE_IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REGISTRY/$SERVICE:$TAG

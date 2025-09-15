@@ -30,3 +30,6 @@ namespace   = "dataverse-dev"
 
 # Data Commons API key. See https://docs.datacommons.org/custom_dc/quickstart.html#prerequisites
 dc_api_key = "gps-dataverse-api-key"
+
+# Image Name
+dc_web_service_image = "us-central1-docker.pkg.dev/gps-dataverse-dev-468813/gps-dataverse-dev-468813-artifacts/datacommons-services:latest"
