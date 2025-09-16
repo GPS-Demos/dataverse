@@ -26,12 +26,14 @@ jest.mock("./use_draw_on_resize", () => ({
   }),
 }));
 
+import { ThemeProvider } from "@emotion/react";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 import axios from "axios";
 import Cheerio from "cheerio";
 import Enzyme, { mount } from "enzyme";
 import React from "react";
 
+import theme from "../../theme/theme";
 import { BarTile } from "./bar_tile";
 
 Enzyme.configure({ adapter: new Adapter() });
@@ -50,12 +52,17 @@ declare global {
 }
 
 beforeAll(() => {
-  SVGElement.prototype.getComputedTextLength = () => 100;
-  SVGElement.prototype.getBBox = () => ({ x: 1, y: 1, width: 1, height: 1 });
+  SVGElement.prototype.getComputedTextLength = (): number => 100;
+  SVGElement.prototype.getBBox = (): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } => ({ x: 1, y: 1, width: 1, height: 1 });
 });
 
 function mockAxios(): void {
-  mockedAxios.post.mockImplementation((url, options) => {
+  mockedAxios.post.mockImplementation((url) => {
     if (url === "/api/place/name") {
       return Promise.resolve({
         data: {
@@ -74,8 +81,9 @@ function mockAxios(): void {
     return Promise.resolve({});
   });
 
-  mockedAxios.get.mockImplementation((url, options) => {
+  mockedAxios.get.mockImplementation((url) => {
     if (url === "/api/observations/point/within") {
+      /* eslint-disable camelcase */
       return Promise.resolve({
         data: {
           data: {
@@ -116,6 +124,7 @@ function mockAxios(): void {
         data: { sector_property: [] },
       });
     }
+    /* eslint-enable camelcase */
     console.log("axios.get URL", url, "not handled.. returning empty response");
     return Promise.resolve({});
   });
@@ -125,24 +134,26 @@ describe("BarTile", () => {
   it("Bar tile with non-place entities should render", async () => {
     mockAxios();
     const wrapper = mount(
-      <BarTile
-        barHeight={200}
-        className={"some-class"}
-        id={"bar-id"}
-        variables={[
-          {
-            denom: "",
-            log: false,
-            scaling: 1,
-            statVar: "sector_property",
-            unit: "",
-          },
-        ]}
-        svgChartHeight={200}
-        title={"Chart Title"}
-        enclosedPlaceType={"NAICSEnum"}
-        parentPlace={"NAICSEnum"}
-      />
+      <ThemeProvider theme={theme}>
+        <BarTile
+          barHeight={200}
+          className={"some-class"}
+          id={"bar-id"}
+          variables={[
+            {
+              denom: "",
+              log: false,
+              scaling: 1,
+              statVar: "sector_property",
+              unit: "",
+            },
+          ]}
+          svgChartHeight={200}
+          title={"Chart Title"}
+          enclosedPlaceType={"NAICSEnum"}
+          parentPlace={"NAICSEnum"}
+        />
+      </ThemeProvider>
     );
     await act(async () => {
       await wrapper.update();

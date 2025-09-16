@@ -36,7 +36,9 @@
                       "Count_Worker_NAICSRealEstateRentalLeasing_multiple_place_bar_block",
                       "Count_Worker_NAICSPublicAdministration_multiple_place_bar_block",
                       "Count_Worker_NAICSWholesaleTrade_multiple_place_bar_block",
-                      "Count_Worker_NAICSProfessionalScientificTechnicalServices_multiple_place_bar_block"
+                      "Count_Worker_NAICSProfessionalScientificTechnicalServices_multiple_place_bar_block",
+                      "Count_Worker_NAICSManagementOfCompaniesEnterprises_multiple_place_bar_block",
+                      "Count_Worker_NAICSNonclassifiable_multiple_place_bar_block"
                     ],
                     "title": "Categories of Jobs in Placer County (${date})",
                     "type": "BAR"
@@ -46,64 +48,6 @@
             ],
             "denom": "Count_Person",
             "title": "Categories of Jobs"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "Count_Worker_NAICSTotalAllIndustries"
-                    ],
-                    "title": "Workers in All Industries in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Workers in All Industries in Placer County",
-                    "statVarKey": [
-                      "Count_Worker_NAICSTotalAllIndustries"
-                    ],
-                    "title": "Workers in All Industries in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Workers in All Industries"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "Count_Worker_NAICSServiceProviding"
-                    ],
-                    "title": "Population: Service-producing in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Service-producing in Placer County",
-                    "statVarKey": [
-                      "Count_Worker_NAICSServiceProviding"
-                    ],
-                    "title": "Population: Service-producing in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Service-producing"
           },
           {
             "columns": [
@@ -172,9 +116,9 @@
                 "tiles": [
                   {
                     "statVarKey": [
-                      "dc/nfdf9rt7kbggb"
+                      "Count_Person_InLaborForce"
                     ],
-                    "title": "Population: Worked at Home, Management, Business, Science, and Arts Occupations in Placer County",
+                    "title": "Population in the Labor Force in Placer County",
                     "type": "LINE"
                   }
                 ]
@@ -182,18 +126,18 @@
               {
                 "tiles": [
                   {
-                    "description": "Population: Worked at Home, Management, Business, Science, and Arts Occupations in Placer County",
+                    "description": "Population in the Labor Force in Placer County",
                     "statVarKey": [
-                      "dc/nfdf9rt7kbggb"
+                      "Count_Person_InLaborForce"
                     ],
-                    "title": "Population: Worked at Home, Management, Business, Science, and Arts Occupations in Placer County",
+                    "title": "Population in the Labor Force in Placer County",
                     "type": "HIGHLIGHT"
                   }
                 ]
               }
             ],
             "denom": "Count_Person",
-            "title": "Population: Worked at Home, Management, Business, Science, and Arts Occupations"
+            "title": "Population in the Labor Force"
           },
           {
             "columns": [
@@ -205,9 +149,9 @@
                       "showHighest": true
                     },
                     "statVarKey": [
-                      "dc/nfdf9rt7kbggb"
+                      "Count_Person_InLaborForce"
                     ],
-                    "title": "Population: Worked at Home, Management, Business, Science, and Arts Occupations in Cities of Placer County (${date})",
+                    "title": "Population in the Labor Force in Cities of Placer County (${date})",
                     "type": "RANKING"
                   }
                 ]
@@ -216,16 +160,16 @@
                 "tiles": [
                   {
                     "statVarKey": [
-                      "dc/nfdf9rt7kbggb"
+                      "Count_Person_InLaborForce"
                     ],
-                    "title": "Population: Worked at Home, Management, Business, Science, and Arts Occupations in Cities of Placer County (${date})",
+                    "title": "Population in the Labor Force in Cities of Placer County (${date})",
                     "type": "MAP"
                   }
                 ]
               }
             ],
             "denom": "Count_Person",
-            "title": "Population: Worked at Home, Management, Business, Science, and Arts Occupations in Cities of Placer County"
+            "title": "Population in the Labor Force in Cities of Placer County"
           },
           {
             "columns": [
@@ -233,57 +177,17 @@
                 "tiles": [
                   {
                     "statVarKey": [
-                      "Count_Establishment_NAICSTotalAllIndustries"
+                      "Count_Person_InLaborForce_Female",
+                      "Count_Person_InLaborForce_Male"
                     ],
-                    "title": "Establishments (All Industries) in Placer County",
+                    "title": "Labor Force by Gender in Placer County",
                     "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Establishments (All Industries) in Placer County",
-                    "statVarKey": [
-                      "Count_Establishment_NAICSTotalAllIndustries"
-                    ],
-                    "title": "Establishments (All Industries) in Placer County",
-                    "type": "HIGHLIGHT"
                   }
                 ]
               }
             ],
             "denom": "Count_Person",
-            "title": "Establishments (All Industries)"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/7wt44yv38rew"
-                    ],
-                    "title": "Population: Worked at Home, Sales and Office Occupations in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Worked at Home, Sales and Office Occupations in Placer County",
-                    "statVarKey": [
-                      "dc/7wt44yv38rew"
-                    ],
-                    "title": "Population: Worked at Home, Sales and Office Occupations in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Worked at Home, Sales and Office Occupations"
+            "title": "Labor Force by Gender"
           },
           {
             "columns": [
@@ -295,9 +199,9 @@
                       "showHighest": true
                     },
                     "statVarKey": [
-                      "dc/7wt44yv38rew"
+                      "Count_Person_InLaborForce_Female"
                     ],
-                    "title": "Population: Worked at Home, Sales and Office Occupations in Cities of Placer County (${date})",
+                    "title": "Population: 16 Years or More, in Labor Force, Female in Cities of Placer County (${date})",
                     "type": "RANKING"
                   }
                 ]
@@ -306,45 +210,16 @@
                 "tiles": [
                   {
                     "statVarKey": [
-                      "dc/7wt44yv38rew"
+                      "Count_Person_InLaborForce_Female"
                     ],
-                    "title": "Population: Worked at Home, Sales and Office Occupations in Cities of Placer County (${date})",
+                    "title": "Population: 16 Years or More, in Labor Force, Female in Cities of Placer County (${date})",
                     "type": "MAP"
                   }
                 ]
               }
             ],
             "denom": "Count_Person",
-            "title": "Population: Worked at Home, Sales and Office Occupations in Cities of Placer County"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/dn2h9yfcgbkg2"
-                    ],
-                    "title": "Population: Worked at Home, Service Occupations in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Worked at Home, Service Occupations in Placer County",
-                    "statVarKey": [
-                      "dc/dn2h9yfcgbkg2"
-                    ],
-                    "title": "Population: Worked at Home, Service Occupations in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Worked at Home, Service Occupations"
+            "title": "Population: 16 Years or More, in Labor Force, Female in Cities of Placer County"
           },
           {
             "columns": [
@@ -356,9 +231,9 @@
                       "showHighest": true
                     },
                     "statVarKey": [
-                      "dc/dn2h9yfcgbkg2"
+                      "Count_Person_InLaborForce_Male"
                     ],
-                    "title": "Population: Worked at Home, Service Occupations in Cities of Placer County (${date})",
+                    "title": "Population: 16 Years or More, in Labor Force, Male in Cities of Placer County (${date})",
                     "type": "RANKING"
                   }
                 ]
@@ -367,199 +242,52 @@
                 "tiles": [
                   {
                     "statVarKey": [
-                      "dc/dn2h9yfcgbkg2"
+                      "Count_Person_InLaborForce_Male"
                     ],
-                    "title": "Population: Worked at Home, Service Occupations in Cities of Placer County (${date})",
+                    "title": "Population: 16 Years or More, in Labor Force, Male in Cities of Placer County (${date})",
                     "type": "MAP"
                   }
                 ]
               }
             ],
             "denom": "Count_Person",
-            "title": "Population: Worked at Home, Service Occupations in Cities of Placer County"
+            "title": "Population: 16 Years or More, in Labor Force, Male in Cities of Placer County"
           },
           {
             "columns": [
               {
                 "tiles": [
                   {
-                    "statVarKey": [
-                      "Count_Household_MarriedCoupleFamilyHousehold_With2Worker"
-                    ],
-                    "title": "Count of Household: Married Couple Family Household, Worker 2 in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Count of Household: Married Couple Family Household, Worker 2 in Placer County",
-                    "statVarKey": [
-                      "Count_Household_MarriedCoupleFamilyHousehold_With2Worker"
-                    ],
-                    "title": "Count of Household: Married Couple Family Household, Worker 2 in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Count of Household: Married Couple Family Household, Worker 2"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "rankingTileSpec": {
-                      "rankingCount": 10,
-                      "showHighest": true
+                    "barTileSpec": {
+                      "maxPlaces": 15,
+                      "maxVariables": 15,
+                      "sort": "DESCENDING"
                     },
-                    "statVarKey": [
-                      "Count_Household_MarriedCoupleFamilyHousehold_With2Worker"
+                    "comparisonPlaces": [
+                      "geoId/06061"
                     ],
-                    "title": "Count of Household: Married Couple Family Household, Worker 2 in Cities of Placer County (${date})",
-                    "type": "RANKING"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
                     "statVarKey": [
-                      "Count_Household_MarriedCoupleFamilyHousehold_With2Worker"
+                      "Count_Person_16OrMoreYears_NoHealthInsurance_NAICSPublicAdministration_Worker_multiple_place_bar_block",
+                      "Count_Worker_NAICSAccommodationFoodServices_multiple_place_bar_block",
+                      "Count_Worker_NAICSAgricultureForestryFishingHunting_multiple_place_bar_block",
+                      "Count_Worker_NAICSTotalAllIndustries_multiple_place_bar_block",
+                      "Count_Worker_NAICSWholesaleTrade_multiple_place_bar_block",
+                      "dc/01yc3k23tsyk_multiple_place_bar_block",
+                      "dc/e2mpgewwsl60c_multiple_place_bar_block",
+                      "dc/p69tpsldf99h7_multiple_place_bar_block",
+                      "dc/34t2kjrwbjd31_multiple_place_bar_block",
+                      "Count_Worker_NAICSMiningQuarryingOilGasExtraction_multiple_place_bar_block",
+                      "dc/j4v6keqwsl60h_multiple_place_bar_block",
+                      "dc/w5ve4140t8xsb_multiple_place_bar_block"
                     ],
-                    "title": "Count of Household: Married Couple Family Household, Worker 2 in Cities of Placer County (${date})",
-                    "type": "MAP"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Count of Household: Married Couple Family Household, Worker 2 in Cities of Placer County"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/cs8fvwkmpmlpg"
-                    ],
-                    "title": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations in Placer County",
-                    "statVarKey": [
-                      "dc/cs8fvwkmpmlpg"
-                    ],
-                    "title": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations in Placer County",
-                    "type": "HIGHLIGHT"
+                    "title": "Employment by Industry in Placer County (${date})",
+                    "type": "BAR"
                   }
                 ]
               }
             ],
             "denom": "Count_Person",
-            "title": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "rankingTileSpec": {
-                      "rankingCount": 10,
-                      "showHighest": true
-                    },
-                    "statVarKey": [
-                      "dc/cs8fvwkmpmlpg"
-                    ],
-                    "title": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations in Cities of Placer County (${date})",
-                    "type": "RANKING"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/cs8fvwkmpmlpg"
-                    ],
-                    "title": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations in Cities of Placer County (${date})",
-                    "type": "MAP"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Worked at Home, Production, Transportation, and Material Moving Occupations in Cities of Placer County"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/j7pej9wer7lkd"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations in Placer County",
-                    "statVarKey": [
-                      "dc/j7pej9wer7lkd"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "rankingTileSpec": {
-                      "rankingCount": 10,
-                      "showHighest": true
-                    },
-                    "statVarKey": [
-                      "dc/j7pej9wer7lkd"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations in Cities of Placer County (${date})",
-                    "type": "RANKING"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/j7pej9wer7lkd"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations in Cities of Placer County (${date})",
-                    "type": "MAP"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, and Maintenance Occupations in Cities of Placer County"
+            "title": "Employment by Industry"
           },
           {
             "columns": [
@@ -587,6 +315,7 @@
                 ]
               }
             ],
+            "description": "Percentage of the labor force actively seeking work but unable to find employment.",
             "title": "Unemployment Rate"
           },
           {
@@ -618,7 +347,69 @@
                 ]
               }
             ],
+            "description": "Percentage of the labor force actively seeking work but unable to find employment.",
             "title": "Unemployment Rate in Cities of Placer County"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person_Unemployed"
+                    ],
+                    "title": "Population: Unemployed in Placer County",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Unemployed in Placer County",
+                    "statVarKey": [
+                      "Count_Person_Unemployed"
+                    ],
+                    "title": "Population: Unemployed in Placer County",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Unemployed"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 10,
+                      "showHighest": true
+                    },
+                    "statVarKey": [
+                      "Count_Person_Unemployed"
+                    ],
+                    "title": "Population: Unemployed in Cities of Placer County (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person_Unemployed"
+                    ],
+                    "title": "Population: Unemployed in Cities of Placer County (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Unemployed in Cities of Placer County"
           },
           {
             "columns": [
@@ -648,138 +439,12 @@
             ],
             "denom": "Count_Person",
             "title": "Population: 16 Years or More, Civilian, Privately Owned, No Health Insurance, Non Institutionalized, Unpaid Family Worker, Worker"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/m615rq99fwf2c"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Service Occupations in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Car Truck or Van Carpooled, Service Occupations in Placer County",
-                    "statVarKey": [
-                      "dc/m615rq99fwf2c"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Service Occupations in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Car Truck or Van Carpooled, Service Occupations"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "rankingTileSpec": {
-                      "rankingCount": 10,
-                      "showHighest": true
-                    },
-                    "statVarKey": [
-                      "dc/m615rq99fwf2c"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Service Occupations in Cities of Placer County (${date})",
-                    "type": "RANKING"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/m615rq99fwf2c"
-                    ],
-                    "title": "Population: Car Truck or Van Carpooled, Service Occupations in Cities of Placer County (${date})",
-                    "type": "MAP"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Car Truck or Van Carpooled, Service Occupations in Cities of Placer County"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/n99t0lnl3fch6"
-                    ],
-                    "title": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations in Placer County",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "description": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations in Placer County",
-                    "statVarKey": [
-                      "dc/n99t0lnl3fch6"
-                    ],
-                    "title": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations in Placer County",
-                    "type": "HIGHLIGHT"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations"
-          },
-          {
-            "columns": [
-              {
-                "tiles": [
-                  {
-                    "rankingTileSpec": {
-                      "rankingCount": 10,
-                      "showHighest": true
-                    },
-                    "statVarKey": [
-                      "dc/n99t0lnl3fch6"
-                    ],
-                    "title": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations in Cities of Placer County (${date})",
-                    "type": "RANKING"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "statVarKey": [
-                      "dc/n99t0lnl3fch6"
-                    ],
-                    "title": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations in Cities of Placer County (${date})",
-                    "type": "MAP"
-                  }
-                ]
-              }
-            ],
-            "denom": "Count_Person",
-            "title": "Population: Walked, Natural Resources, Construction, and Maintenance Occupations in Cities of Placer County"
           }
         ],
         "statVarSpec": {
-          "Count_Establishment_NAICSTotalAllIndustries": {
-            "name": "Establishments (All Industries)",
-            "statVar": "Count_Establishment_NAICSTotalAllIndustries"
-          },
-          "Count_Household_MarriedCoupleFamilyHousehold_With2Worker": {
-            "name": "Count of Household: Married Couple Family Household, Worker 2",
-            "statVar": "Count_Household_MarriedCoupleFamilyHousehold_With2Worker"
+          "Count_Person_16OrMoreYears_NoHealthInsurance_NAICSPublicAdministration_Worker_multiple_place_bar_block": {
+            "name": "Population: 16 Years or More, Civilian, No Health Insurance, Non Institutionalized, Public Administration (NAICS/92), Worker",
+            "statVar": "Count_Person_16OrMoreYears_NoHealthInsurance_NAICSPublicAdministration_Worker"
           },
           "Count_Person_16OrMoreYears_PrivatelyOwnedEstablishment_NoHealthInsurance_UnpaidFamilyWorker_Worker": {
             "name": "Population: 16 Years or More, Civilian, Privately Owned, No Health Insurance, Non Institutionalized, Unpaid Family Worker, Worker",
@@ -789,121 +454,133 @@
             "name": "Population With Current Employment",
             "statVar": "Count_Person_Employed"
           },
+          "Count_Person_InLaborForce": {
+            "name": "Population in the Labor Force",
+            "statVar": "Count_Person_InLaborForce"
+          },
+          "Count_Person_InLaborForce_Female": {
+            "name": "Population: 16 Years or More, in Labor Force, Female",
+            "statVar": "Count_Person_InLaborForce_Female"
+          },
+          "Count_Person_InLaborForce_Male": {
+            "name": "Population: 16 Years or More, in Labor Force, Male",
+            "statVar": "Count_Person_InLaborForce_Male"
+          },
+          "Count_Person_Unemployed": {
+            "name": "Population: Unemployed",
+            "statVar": "Count_Person_Unemployed"
+          },
           "Count_Worker_NAICSAccommodationFoodServices_multiple_place_bar_block": {
-            "name": "Accomodation/Food Industry",
+            "name": "Accommodation/Food Industry Workers",
             "statVar": "Count_Worker_NAICSAccommodationFoodServices"
           },
           "Count_Worker_NAICSAdministrativeSupportWasteManagementRemediationServices_multiple_place_bar_block": {
-            "name": "Admin / Waste Management Service Industry",
+            "name": "Admin / Waste Management Service Industry Workers",
             "statVar": "Count_Worker_NAICSAdministrativeSupportWasteManagementRemediationServices"
           },
           "Count_Worker_NAICSAgricultureForestryFishingHunting_multiple_place_bar_block": {
-            "name": "Agriculture, Forestry, Fishing, Hunting",
+            "name": "Agriculture, Forestry, Fishing, Hunting Workers",
             "statVar": "Count_Worker_NAICSAgricultureForestryFishingHunting"
           },
           "Count_Worker_NAICSArtsEntertainmentRecreation_multiple_place_bar_block": {
-            "name": "Arts, Entertainment, Recreation Industry",
+            "name": "Arts, Entertainment, Recreation Industry Workers",
             "statVar": "Count_Worker_NAICSArtsEntertainmentRecreation"
           },
           "Count_Worker_NAICSConstruction_multiple_place_bar_block": {
-            "name": "Construction Industry",
+            "name": "Population Working in the Construction Industry",
             "statVar": "Count_Worker_NAICSConstruction"
           },
           "Count_Worker_NAICSEducationalServices_multiple_place_bar_block": {
-            "name": "Educational Services Industry",
+            "name": "Educational Services Industry Workers",
             "statVar": "Count_Worker_NAICSEducationalServices"
           },
           "Count_Worker_NAICSFinanceInsurance_multiple_place_bar_block": {
-            "name": "Finance and Insurance Industry",
+            "name": "Finance and Insurance Industry Workers",
             "statVar": "Count_Worker_NAICSFinanceInsurance"
           },
           "Count_Worker_NAICSHealthCareSocialAssistance_multiple_place_bar_block": {
-            "name": "Health Care and Social Assistance Industry",
+            "name": "Health Care and Social Assistance Industry Workers",
             "statVar": "Count_Worker_NAICSHealthCareSocialAssistance"
           },
           "Count_Worker_NAICSInformation_multiple_place_bar_block": {
-            "name": "Information Industry",
+            "name": "Information Industry Workers",
             "statVar": "Count_Worker_NAICSInformation"
           },
+          "Count_Worker_NAICSManagementOfCompaniesEnterprises_multiple_place_bar_block": {
+            "name": "Population Working in the Management of Companies and Enterprises Industry",
+            "statVar": "Count_Worker_NAICSManagementOfCompaniesEnterprises"
+          },
           "Count_Worker_NAICSMiningQuarryingOilGasExtraction_multiple_place_bar_block": {
-            "name": "Mining, Quarrying, Oil and Gas Extraction Industry",
+            "name": "Mining, Quarrying, Oil and Gas Extraction Industry Workers",
             "statVar": "Count_Worker_NAICSMiningQuarryingOilGasExtraction"
           },
+          "Count_Worker_NAICSNonclassifiable_multiple_place_bar_block": {
+            "name": "Unclassified Workers",
+            "statVar": "Count_Worker_NAICSNonclassifiable"
+          },
           "Count_Worker_NAICSOtherServices_multiple_place_bar_block": {
-            "name": "Other Services (except Public Admin)",
+            "name": "Other Services (except Public Admin) Workers",
             "statVar": "Count_Worker_NAICSOtherServices"
           },
           "Count_Worker_NAICSProfessionalScientificTechnicalServices_multiple_place_bar_block": {
-            "name": "Professional, Scientific, and Technical Services",
+            "name": "Professional, Scientific, and Technical Services Workers",
             "statVar": "Count_Worker_NAICSProfessionalScientificTechnicalServices"
           },
           "Count_Worker_NAICSPublicAdministration_multiple_place_bar_block": {
-            "name": "Public Administration",
+            "name": "Public Administration Workers",
             "statVar": "Count_Worker_NAICSPublicAdministration"
           },
           "Count_Worker_NAICSRealEstateRentalLeasing_multiple_place_bar_block": {
-            "name": "Real Estate and Rental and Leasing",
+            "name": "Real Estate and Rental and Leasing Workers",
             "statVar": "Count_Worker_NAICSRealEstateRentalLeasing"
           },
-          "Count_Worker_NAICSServiceProviding": {
-            "name": "Population: Service-producing",
-            "statVar": "Count_Worker_NAICSServiceProviding"
-          },
-          "Count_Worker_NAICSTotalAllIndustries": {
+          "Count_Worker_NAICSTotalAllIndustries_multiple_place_bar_block": {
             "name": "Workers in All Industries",
             "statVar": "Count_Worker_NAICSTotalAllIndustries"
           },
           "Count_Worker_NAICSUtilities_multiple_place_bar_block": {
-            "name": "Utilities",
+            "name": "Utilities Workers",
             "statVar": "Count_Worker_NAICSUtilities"
           },
           "Count_Worker_NAICSWholesaleTrade_multiple_place_bar_block": {
-            "name": "Wholesale Trade",
+            "name": "Wholesale Trade Workers",
             "statVar": "Count_Worker_NAICSWholesaleTrade"
           },
           "UnemploymentRate_Person": {
             "name": "Unemployment Rate",
             "statVar": "UnemploymentRate_Person"
           },
-          "dc/7wt44yv38rew": {
-            "name": "Population: Worked At Home, Sales And Office Occupations",
-            "statVar": "dc/7wt44yv38rew"
+          "dc/01yc3k23tsyk_multiple_place_bar_block": {
+            "name": "Population of Person: Manufacturing (NAICS/1013)",
+            "statVar": "dc/01yc3k23tsyk"
+          },
+          "dc/34t2kjrwbjd31_multiple_place_bar_block": {
+            "name": "Population Working in the Petroleum and Coal Products Manufacturing Industry",
+            "statVar": "dc/34t2kjrwbjd31"
           },
           "dc/8p97n7l96lgg8_multiple_place_bar_block": {
-            "name": "Transportation And Warehousing",
+            "name": "Transportation And Warehousing Workers",
             "statVar": "dc/8p97n7l96lgg8"
           },
-          "dc/cs8fvwkmpmlpg": {
-            "name": "Population: Worked At Home, Production, Transportation, And Material Moving Occupations",
-            "statVar": "dc/cs8fvwkmpmlpg"
+          "dc/e2mpgewwsl60c_multiple_place_bar_block": {
+            "name": "Population of Person: Natural Resources And Mining (NAICS/1011)",
+            "statVar": "dc/e2mpgewwsl60c"
           },
-          "dc/dn2h9yfcgbkg2": {
-            "name": "Population: Worked At Home, Service Occupations",
-            "statVar": "dc/dn2h9yfcgbkg2"
-          },
-          "dc/j7pej9wer7lkd": {
-            "name": "Population: Car Truck or Van Carpooled, Natural Resources, Construction, And Maintenance Occupations",
-            "statVar": "dc/j7pej9wer7lkd"
-          },
-          "dc/m615rq99fwf2c": {
-            "name": "Population: Car Truck or Van Carpooled, Service Occupations",
-            "statVar": "dc/m615rq99fwf2c"
-          },
-          "dc/n99t0lnl3fch6": {
-            "name": "Population: Walked, Natural Resources, Construction, And Maintenance Occupations",
-            "statVar": "dc/n99t0lnl3fch6"
+          "dc/j4v6keqwsl60h_multiple_place_bar_block": {
+            "name": "Population of Person: Computer And Electronic Product Manufacturing (NAICS/334)",
+            "statVar": "dc/j4v6keqwsl60h"
           },
           "dc/ndg1xk1e9frc2_multiple_place_bar_block": {
-            "name": "Manufacturing",
+            "name": "Manufacturing Workers",
             "statVar": "dc/ndg1xk1e9frc2"
           },
-          "dc/nfdf9rt7kbggb": {
-            "name": "Population: Worked At Home, Management, Business, Science, And Arts Occupations",
-            "statVar": "dc/nfdf9rt7kbggb"
-          },
           "dc/p69tpsldf99h7_multiple_place_bar_block": {
-            "name": "Retail Trade",
+            "name": "Retail Trade Workers",
             "statVar": "dc/p69tpsldf99h7"
+          },
+          "dc/w5ve4140t8xsb_multiple_place_bar_block": {
+            "name": "Population of Person: Machinery Manufacturing (NAICS/333)",
+            "statVar": "dc/w5ve4140t8xsb"
           }
         }
       }
@@ -1107,6 +784,13 @@
           ]
         },
         {
+          "dcid": "wikidataId/Q5245735",
+          "name": "Deadwood",
+          "types": [
+            "City"
+          ]
+        },
+        {
           "dcid": "wikidataId/Q822230",
           "name": "Squaw Valley",
           "types": [
@@ -1116,16 +800,7 @@
       ]
     },
     "childTopics": [],
-    "exploreMore": {
-      "Count_Establishment_NAICSTotalAllIndustries": {
-        "establishmentOwnership": [
-          "Count_Establishment_FederalGovernmentOwnedEstablishment_NAICSTotalAllIndustries",
-          "Count_Establishment_LocalGovernmentOwnedEstablishment_NAICSTotalAllIndustries",
-          "Count_Establishment_PrivatelyOwnedEstablishment_NAICSTotalAllIndustries",
-          "Count_Establishment_StateGovernmentOwnedEstablishment_NAICSTotalAllIndustries"
-        ]
-      }
-    },
+    "exploreMore": {},
     "mainTopics": [
       {
         "dcid": "dc/topic/Jobs",
@@ -1361,7 +1036,6 @@
     ]
   },
   "svSource": "CURRENT_QUERY",
-  "userMessage": "See relevant statistics for Placer County based on the previous query.",
   "userMessages": [
     "See relevant statistics for Placer County based on the previous query."
   ]

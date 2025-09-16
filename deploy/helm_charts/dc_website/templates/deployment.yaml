@@ -100,9 +100,9 @@ spec:
             periodSeconds: 10
           resources:
             limits:
-              memory: "3G"
+              memory: "4G"
             requests:
-              memory: "3G"
+              memory: "4G"
           volumeMounts:
             - name: ingress-config
               mountPath: /datacommons/ingress
@@ -135,6 +135,8 @@ spec:
               value: {{ .Values.nl.enabled | quote }}
             - name: ENABLE_EVAL_TOOL
               value: {{ .Values.website.evalTool.enabled | quote }}
+            - name: ENABLE_DATAGEMMA
+              value: {{ .Values.website.dataGemma.enabled | quote }}
             - name: INGRESS_CONFIG_PATH
               value: /datacommons/ingress/rules
             # A dummy config used to bounce the server without any docker image
@@ -162,6 +164,7 @@ spec:
               path: /healthz
               port: 6060
             failureThreshold: 30
+            periodSeconds: 10
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
@@ -172,11 +175,13 @@ spec:
             # there's already NUM_WORKERS number of requests, need to wait
             # before /healthz can be served.
             timeoutSeconds: 300
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
               port: 6060
             timeoutSeconds: 300
+            periodSeconds: 10
           ports:
             - containerPort: 6060
         {{- end }}

@@ -36,7 +36,7 @@
     "defaultMessage": "RNB (PPA) par habitant"
   },
   "Amount_Emissions_CarbonDioxide_PerCapita": {
-    "defaultMessage": "Carbon Dioxide Emissions"
+    "defaultMessage": "Émissions de dioxyde de carbone"
   },
   "Amount_Remittance_InwardRemittance": {
     "defaultMessage": "Fonds transférés de l'étranger"
@@ -66,25 +66,25 @@
     "defaultMessage": "Crimes violents"
   },
   "Count_CriminalIncidents_IsHateCrime": {
-    "defaultMessage": "Hate Crimes"
+    "defaultMessage": "Crimes de haine"
   },
   "Count_CriminalIncidents_BiasMotivationGender_IsHateCrime": {
-    "defaultMessage": "Hate Crimes (Motivated by Gender)"
+    "defaultMessage": "Crimes de haine (motivés par le genre)"
   },
   "Count_CriminalIncidents_BiasMotivationRace_IsHateCrime": {
-    "defaultMessage": "Hate Crimes (Motivated by Race)"
+    "defaultMessage": "Crimes de haine (motivés par l'origine ethnique)"
   },
   "Count_CriminalIncidents_BiasMotivationReligion_IsHateCrime": {
-    "defaultMessage": "Hate Crimes (Motivated by Religion)"
+    "defaultMessage": "Crimes de haine (motivés par la religion)"
   },
   "Count_CriminalIncidents_BiasMotivationEthnicity_IsHateCrime": {
-    "defaultMessage": "Hate Crimes (Motivated by Ethnicity)"
+    "defaultMessage": "Crimes de haine (motivés par l'origine ethnique)"
   },
   "Count_CriminalIncidents_BiasMotivationSexualOrientation_IsHateCrime": {
-    "defaultMessage": "Hate Crimes (Motivated by Sexual Orientation)"
+    "defaultMessage": "Crimes de haine (motivés par l'orientation sexuelle)"
   },
   "Count_CriminalIncidents_BiasMotivationDisabilityStatus_IsHateCrime": {
-    "defaultMessage": "Hate Crimes (Motivated by Disability)"
+    "defaultMessage": "Crimes de haine (motivés par le handicap)"
   },
   "Count_CycloneEvent": {
     "defaultMessage": "Cyclone"
@@ -816,19 +816,19 @@
     "defaultMessage": "Sikhe"
   },
   "AirQualityIndex_AirPollutant": {
-    "defaultMessage": "AQI"
+    "defaultMessage": "IQA"
   },
   "DifferenceRelativeToBaseDate2006_Max_Temperature_RCP26": {
-    "defaultMessage": "Max Temperature Change, Base Year 2006, RCP 2.6"
+    "defaultMessage": "Changement de température max., année de base 2006, scénario RCP 2.6"
   },
   "DifferenceRelativeToBaseDate2006_Max_Temperature_RCP45": {
-    "defaultMessage": "Max Temperature Change, Base Year 2006, RCP 4.5"
+    "defaultMessage": "Changement de température max., année de base 2006, scénario RCP 4.5"
   },
   "DifferenceRelativeToBaseDate2006_Max_Temperature_RCP60": {
-    "defaultMessage": "Max Temperature Change, Base Year 2006, RCP 6.0"
+    "defaultMessage": "Changement de température max., année de base 2006, scénario RCP 6.0"
   },
   "DifferenceRelativeToBaseDate2006_Max_Temperature_RCP85": {
-    "defaultMessage": "Max Temperature Change, Base Year 2006, RCP 8.5"
+    "defaultMessage": "Changement de température max., année de base 2006, scénario RCP 8.5"
   },
   "Mean_Concentration_AirPollutant_PM2.5": {
     "defaultMessage": "PM2.5"
@@ -837,33 +837,33 @@
     "defaultMessage": "Ozone"
   },
   "Mean_Concentration_AirPollutant_DieselPM": {
-    "defaultMessage": "Diesel PM"
+    "defaultMessage": "Particules fines de diesel"
   },
   "Annual_Emissions_CarbonDioxide_NonBiogenic": {
-    "defaultMessage": "Carbon Dioxide (Large Facilities, Non-biogenic)"
+    "defaultMessage": "Dioxyde de carbone (grandes installations, non biogénique)"
   },
   "Annual_Emissions_Methane_NonBiogenic": {
-    "defaultMessage": "Methane (Large Facilities, Non-biogenic)"
+    "defaultMessage": "Méthane (grandes installations, non biogénique)"
   },
   "Annual_Emissions_NitrousOxide_NonBiogenic": {
-    "defaultMessage": "Nitrous Oxide (Large Facilities, Non-biogenic)"
+    "defaultMessage": "Protoxyde d'azote (grandes installations, non biogénique)"
   },
   "Annual_Emissions_GreenhouseGas_NonBiogenic": {
-    "defaultMessage": "Greenhouse Gas (Large Facilities, Non-biogenic)"
+    "defaultMessage": "Gaz à effet de serre (grandes installations, non biogéniques)"
   },
   "WithdrawalRate_Water": {
-    "defaultMessage": "Water Withdrawal Rate"
+    "defaultMessage": "Taux de prélèvement d'eau"
   },
   "PalmerDroughtSeverityIndex_Atmosphere": {
     "defaultMessage": "PDSI"
   },
   "AirPollutant_Cancer_Risk": {
-    "defaultMessage": "Air Toxics Cancer Risk"
+    "defaultMessage": "Risque de cancer généré par la pollution atmosphérique"
   },
   "Annual_Generation_Electricity": {
-    "defaultMessage": "Annual Electricity Generation"
+    "defaultMessage": "Production annuelle d'électricité"
   },
   "Annual_Average_RetailPrice_Electricity": {
-    "defaultMessage": "Electricity Price"
+    "defaultMessage": "Prix de l'électricité"
   }
 }

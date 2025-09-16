@@ -20,6 +20,7 @@
 
 import _ from "lodash";
 import React, { RefObject, useContext } from "react";
+import { Spinner } from "reactstrap";
 
 import { RankingUnitUrlFuncContext } from "../../js/shared/context";
 import { ASYNC_ELEMENT_CLASS } from "../constants/css_constants";
@@ -77,6 +78,8 @@ interface RankingUnitPropType {
   errorMsg?: string;
   apiRoot?: string;
   entityType?: string;
+  isLoading?: boolean;
+  statVar?: string;
 }
 
 // Calculates ranks based on the order of data if no rank is provided.
@@ -137,14 +140,18 @@ export function RankingUnit(props: RankingUnitPropType): JSX.Element {
     props.isHighest,
     props.numDataPoints
   );
-
   return (
     <div
       className={"ranking-list " + ASYNC_ELEMENT_CLASS}
       ref={props.forwardRef}
     >
       <div className="ranking-header-section">
-        <h4>{props.title}</h4>
+        <h4>
+          {props.isLoading ? (
+            <Spinner color="secondary" size="sm" className="mr-1" />
+          ) : null}
+          {props.title}
+        </h4>
         {props.headerChild}
       </div>
       {props.errorMsg ? (
@@ -196,7 +203,8 @@ export function RankingUnit(props: RankingUnitPropType): JSX.Element {
                             href={urlFunc(
                               point.placeDcid,
                               props.entityType,
-                              props.apiRoot
+                              props.apiRoot,
+                              props.statVar
                             )}
                             text={
                               <PlaceName
@@ -204,13 +212,13 @@ export function RankingUnit(props: RankingUnitPropType): JSX.Element {
                                 apiRoot={props.apiRoot}
                               ></PlaceName>
                             }
-                            onMouseEnter={() => {
+                            onMouseEnter={(): void => {
                               if (!props.onHoverToggled) {
                                 return;
                               }
                               props.onHoverToggled(point.placeDcid, true);
                             }}
-                            onMouseLeave={() => {
+                            onMouseLeave={(): void => {
                               if (!props.onHoverToggled) {
                                 return;
                               }

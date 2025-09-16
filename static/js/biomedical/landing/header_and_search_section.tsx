@@ -47,8 +47,11 @@ const HeadingContainer = styled(ContentContainer)`
 const StyledText = styled.div`
   flex-grow: 1;
 
+  a {
+    color: ${(props): string => props.theme.text.linkColor};
+  }
   h1 {
-    color: ${(props) => props.theme.header.textColor};
+    color: ${(props): string => props.theme.header.textColor};
     font-size: 36px;
     font-weight: 400;
     line-height: 44px;
@@ -61,7 +64,7 @@ const StyledText = styled.div`
   }
 
   h2 {
-    color: ${(props) => props.theme.header.textColor};
+    color: ${(props): string => props.theme.header.textColor};
     font-size: 22px;
     font-weight: 400;
     line-height: 28px;
@@ -74,7 +77,7 @@ const StyledText = styled.div`
   }
 
   h3 {
-    color: ${(props) => props.theme.header.textColorLight};
+    color: ${(props): string => props.theme.header.textColorLight};
     font-size: 22px;
     font-weight: 400;
     line-height: 28px;
@@ -114,8 +117,12 @@ export function HeaderAndSearchBox(): JSX.Element {
           <h1>Data Commons • Biomedical</h1>
           <h2>A bridge to open biomedical data</h2>
           <h3>
-            Find relationships between 25 different categories of biomedical
-            data like genes, proteins, diseases, and more
+            Find relationships between{" "}
+            <a href="/browser/bio">25 biomedical categories</a> sourced from{" "}
+            <a href="https://datacommons.org/data/biomedical">
+              18 trusted sources
+            </a>
+            , including NIH NCBI and EMBL-EBI
           </h3>
           <MultiLineSearchBox
             onSearch={onSearch}

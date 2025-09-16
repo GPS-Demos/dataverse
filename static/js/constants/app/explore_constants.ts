@@ -21,10 +21,11 @@
 // URL hash param keys
 export const URL_HASH_PARAMS = {
   PLACE: "p",
+  STAT_VAR: "sv",
   TOPIC: "t",
   QUERY: "q",
   DC: "dc",
-  // Embeddings index name (listed in embeddings.yaml)
+  // Embeddings index name (listed in catalog.yaml)
   IDX: "idx",
   DISABLE_EXPLORE_MORE: "em",
   // old query param
@@ -42,6 +43,19 @@ export const URL_HASH_PARAMS = {
   DEFAULT_PLACE: "default_place",
   MODE: "mode",
   RERANKER: "reranker",
+  INCLUDE_STOP_WORDS: "includeStopWords",
+  MAX_TOPICS: "maxTopics",
+  MAX_TOPIC_SVS: "maxTopicSvs",
+  MAX_CHARTS: "maxCharts",
+  CHART_TYPE: "chartType",
+  ORIGIN: "origin",
+
+  // The following are used for Facet selection.
+  IMPORT_NAME: "imp",
+  MEASUREMENT_METHOD: "mm",
+  OBSERVATION_PERIOD: "obsPer",
+  SCALING_FACTOR: "scaling",
+  UNIT: "unit",
 };
 export const CLIENT_TYPES = {
   // User typed in a p=X&t=Y URL
@@ -56,6 +70,8 @@ export const CLIENT_TYPES = {
   RELATED_PLACE: "ui_related_place",
   // User clicked on a related topic
   RELATED_TOPIC: "ui_related_topic",
+  // User clicked on a generated question from a related topic
+  RELATED_QUESTION: "ui_related_question",
 };
 // Dcid of the default topic to use
 export const DEFAULT_TOPIC = "dc/topic/Root";

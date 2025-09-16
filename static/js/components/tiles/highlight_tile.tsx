@@ -19,15 +19,21 @@
  */
 
 import _ from "lodash";
-import React, { useEffect, useState } from "react";
+import React, { ReactElement, useEffect, useRef, useState } from "react";
 
 import {
   ASYNC_ELEMENT_CLASS,
   ASYNC_ELEMENT_HOLDER_CLASS,
 } from "../../constants/css_constants";
 import { formatNumber, translateUnit } from "../../i18n/i18n";
-import { Observation } from "../../shared/stat_types";
-import { NamedTypedPlace, StatVarSpec } from "../../shared/types";
+import { Observation, StatMetadata } from "../../shared/stat_types";
+import {
+  NamedTypedPlace,
+  StatVarFacetMap,
+  StatVarSpec,
+} from "../../shared/types";
+import { TileSources } from "../../tools/shared/metadata/tile_sources";
+import { FacetMetadata } from "../../types/facet_metadata";
 import { getPoint, getSeries } from "../../utils/data_fetch_utils";
 import { formatDate } from "../../utils/string_utils";
 import {
@@ -36,7 +42,6 @@ import {
   getNoDataErrorMsg,
   getStatFormat,
   ReplacementStrings,
-  TileSources,
 } from "../../utils/tile_utils";
 
 // units that should be formatted as part of the number
@@ -55,38 +60,55 @@ export interface HighlightTilePropType {
   statVarSpec: StatVarSpec;
   // Optional: Override sources for this tile
   sources?: string[];
+  // Facet metadata to use for the highlight tile
+  highlightFacet?: FacetMetadata;
 }
 
-interface HighlightData extends Observation {
+export interface HighlightData extends Observation {
+  // A set of string sources (URLs)
   sources: Set<string>;
+  // A full set of the facets used within the chart
+  facets: Record<string, StatMetadata>;
+  // A mapping of which stat var used which facets
+  statVarToFacets: StatVarFacetMap;
   numFractionDigits?: number;
   errorMsg: string;
 }
 
-export function HighlightTile(props: HighlightTilePropType): JSX.Element {
+export function HighlightTile(props: HighlightTilePropType): ReactElement {
+  const containerRef = useRef(null);
   const [highlightData, setHighlightData] = useState<HighlightData | undefined>(
     null
   );
 
+  const {
+    statVarSpec,
+    place,
+    highlightFacet,
+    apiRoot,
+    description: highlightDesc,
+  } = props;
+
   useEffect(() => {
-    fetchData(props).then((data) => {
-      setHighlightData(data);
-    });
-  }, [props]);
+    (async (): Promise<void> => {
+      try {
+        const data = await fetchData(
+          place,
+          statVarSpec,
+          highlightFacet,
+          apiRoot
+        );
+        setHighlightData(data);
+      } catch {
+        setHighlightData(null);
+      }
+    })();
+  }, [apiRoot, highlightFacet, place, statVarSpec, highlightDesc]);
 
   if (!highlightData) {
     return null;
   }
-  const rs: ReplacementStrings = {
-    placeName: props.place.name,
-    date: highlightData.date ? formatDate(highlightData.date) : "",
-  };
-  let description = "";
-  if (props.description) {
-    const dateString =
-      !props.description.includes("${date}") && rs.date ? " (${date})" : "";
-    description = formatString(props.description + dateString, rs);
-  }
+  const description = getDescription(highlightData, props);
   // TODO: The {...{ part: "container"}} syntax to set a part is a hacky
   // workaround to add a "part" attribute to a React element without npm errors.
   // This hack should be cleaned up.
@@ -104,6 +126,7 @@ export function HighlightTile(props: HighlightTilePropType): JSX.Element {
     <div
       className={`chart-container highlight-tile ${ASYNC_ELEMENT_HOLDER_CLASS}`}
       {...{ part: "container" }}
+      ref={containerRef}
     >
       {highlightData && !highlightData.errorMsg && (
         <>
@@ -125,80 +148,138 @@ export function HighlightTile(props: HighlightTilePropType): JSX.Element {
         <span>{highlightData.errorMsg}</span>
       )}
       {!_.isEmpty(highlightData.sources) && !highlightData.errorMsg && (
-        <TileSources sources={props.sources || highlightData.sources} />
+        <TileSources
+          apiRoot={props.apiRoot}
+          containerRef={containerRef}
+          sources={props.sources || highlightData.sources}
+          facets={highlightData.facets}
+          statVarToFacets={highlightData.statVarToFacets}
+          statVarSpecs={[props.statVarSpec]}
+        />
       )}
     </div>
   );
 }
 
-const fetchData = (props: HighlightTilePropType): Promise<HighlightData> => {
+export function getDescription(
+  highlightData: HighlightData,
+  props: HighlightTilePropType
+): string {
+  const rs: ReplacementStrings = {
+    placeName: props.place.name || "",
+    date: highlightData.date ? formatDate(highlightData.date) : "",
+  };
+  let description = "";
+  if (props.description) {
+    const dateString =
+      !props.description.includes("${date}") && rs.date ? " (${date})" : "";
+    description = formatString(props.description + dateString, rs);
+  }
+  return description;
+}
+
+export const fetchData = async (
+  place: NamedTypedPlace,
+  statVarSpec: StatVarSpec,
+  highlightFacet: FacetMetadata,
+  apiRoot?: string
+): Promise<HighlightData> => {
+  const facetId = highlightFacet
+    ? undefined
+    : statVarSpec.facetId
+    ? [statVarSpec.facetId]
+    : undefined;
   // Now assume highlight only talks about one stat var.
   const statPromise = getPoint(
-    props.apiRoot,
-    [props.place.dcid],
-    [props.statVarSpec.statVar],
-    props.statVarSpec.date
+    apiRoot,
+    [place.dcid],
+    [statVarSpec.statVar],
+    statVarSpec.date,
+    undefined,
+    highlightFacet,
+    facetId
   );
-  const denomPromise = props.statVarSpec.denom
-    ? getSeries(props.apiRoot, [props.place.dcid], [props.statVarSpec.denom])
+  const denomPromise = statVarSpec.denom
+    ? getSeries(apiRoot, [place.dcid], [statVarSpec.denom], [], highlightFacet)
     : Promise.resolve(null);
-  return Promise.all([statPromise, denomPromise])
-    .then(([statResp, denomResp]) => {
-      const mainStatData =
-        statResp.data[props.statVarSpec.statVar][props.place.dcid];
-      let value = mainStatData.value;
-      const facet = statResp.facets[mainStatData.facet];
-      const sources = new Set();
-      if (facet && facet.provenanceUrl) {
-        sources.add(facet.provenanceUrl);
-      }
-      const { unit, scaling, numFractionDigits } = getStatFormat(
-        props.statVarSpec,
-        statResp
-      );
-      let numFractionDigitsUsed: number;
-      if (props.statVarSpec.denom) {
-        const denomInfo = getDenomInfo(
-          props.statVarSpec,
-          denomResp,
-          props.place.dcid,
-          mainStatData.date
-        );
-        if (denomInfo && value) {
-          value /= denomInfo.value;
-          sources.add(denomInfo.source);
-        } else {
-          value = null;
-        }
-      }
-      let errorMsg = "";
-      if (_.isUndefined(value) || _.isNull(value)) {
-        errorMsg = getNoDataErrorMsg([props.statVarSpec]);
-      } else {
-        // Only do additional calculations if value is not null or undefined
+  const [statResp, denomResp] = await Promise.all([statPromise, denomPromise]);
+  const mainStatData = _.isArray(statResp.data[statVarSpec.statVar][place.dcid])
+    ? statResp.data[statVarSpec.statVar][place.dcid][0]
+    : statResp.data[statVarSpec.statVar][place.dcid];
+  let value = mainStatData.value;
 
-        // If value is a decimal, calculate the numFractionDigits as the number of
-        // digits to get the first non-zero digit and the number after
-        // TODO: think about adding a limit to the number of digits.
-        numFractionDigitsUsed =
-          Math.abs(value) >= 1
-            ? numFractionDigits
-            : 1 - Math.floor(Math.log(Math.abs(value)) / Math.log(10));
-        if (scaling) {
-          value *= scaling;
+  const facets: Record<string, StatMetadata> = {};
+  const statVarToFacets: StatVarFacetMap = {};
+
+  const facet = statResp.facets[mainStatData.facet];
+
+  if (mainStatData.facet && facet) {
+    facets[mainStatData.facet] = facet;
+    if (!statVarToFacets[statVarSpec.statVar]) {
+      statVarToFacets[statVarSpec.statVar] = new Set();
+    }
+    statVarToFacets[statVarSpec.statVar].add(mainStatData.facet);
+  }
+
+  const sources = new Set<string>();
+  if (facet && facet.provenanceUrl) {
+    sources.add(facet.provenanceUrl);
+  }
+  const { unit, scaling, numFractionDigits } = getStatFormat(
+    statVarSpec,
+    statResp
+  );
+  let numFractionDigitsUsed: number;
+  if (statVarSpec.denom) {
+    const denomInfo = getDenomInfo(
+      statVarSpec,
+      denomResp,
+      place.dcid,
+      mainStatData.date
+    );
+    if (denomInfo && value) {
+      value /= denomInfo.value;
+      const denomSeries = denomResp.data[statVarSpec.denom]?.[place.dcid];
+
+      if (denomSeries?.facet) {
+        const denomFacet = denomResp.facets[denomSeries.facet];
+        if (denomFacet) {
+          sources.add(denomFacet.provenanceUrl);
+          facets[denomSeries.facet] = denomFacet;
+          if (!statVarToFacets[statVarSpec.denom]) {
+            statVarToFacets[statVarSpec.denom] = new Set<string>();
+          }
+          statVarToFacets[statVarSpec.denom].add(denomSeries.facet);
         }
       }
-      const result = {
-        value,
-        date: mainStatData.date,
-        numFractionDigitsUsed,
-        unitDisplayName: unit,
-        sources,
-        errorMsg,
-      };
-      return result;
-    })
-    .catch(() => {
-      return null;
-    });
+    } else {
+      value = null;
+    }
+  }
+  let errorMsg = "";
+  if (_.isUndefined(value) || _.isNull(value)) {
+    errorMsg = getNoDataErrorMsg([statVarSpec]);
+  } else {
+    // Only do additional calculations if value is not null or undefined
+    // If value is a decimal, calculate the numFractionDigits as the number of
+    // digits to get the first non-zero digit and the number after
+    // TODO: think about adding a limit to the number of digits.
+    numFractionDigitsUsed =
+      Math.abs(value) >= 1 || value === 0
+        ? numFractionDigits
+        : 1 - Math.floor(Math.log(Math.abs(value)) / Math.log(10));
+    if (scaling) {
+      value *= scaling;
+    }
+  }
+  return {
+    value,
+    date: mainStatData.date,
+    numFractionDigits: numFractionDigitsUsed,
+    unitDisplayName: unit,
+    sources,
+    facets,
+    statVarToFacets,
+    errorMsg,
+  };
 };

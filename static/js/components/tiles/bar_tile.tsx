@@ -19,9 +19,19 @@
  */
 
 import { ISO_CODE_ATTRIBUTE } from "@datacommonsorg/client";
-import { ChartSortOption } from "@datacommonsorg/web-components";
+import {
+  ChartEventDetail,
+  ChartSortOption,
+} from "@datacommonsorg/web-components";
 import _ from "lodash";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { VisType } from "../../apps/visualization/vis_type_configs";
 import { DataGroup, DataPoint } from "../../chart/base";
@@ -32,30 +42,43 @@ import {
 } from "../../chart/draw_bar";
 import { URL_PATH } from "../../constants/app/visualization_constants";
 import { CSV_FIELD_DELIMITER } from "../../constants/tile_constants";
+import { intl } from "../../i18n/i18n";
+import { messages } from "../../i18n/i18n_messages";
 import { PLACE_TYPES } from "../../shared/constants";
-import { PointApiResponse, SeriesApiResponse } from "../../shared/stat_types";
+import { useLazyLoad } from "../../shared/hooks";
+import {
+  buildObservationSpecs,
+  ObservationSpec,
+} from "../../shared/observation_specs";
+import {
+  PointApiResponse,
+  SeriesApiResponse,
+  StatMetadata,
+} from "../../shared/stat_types";
+import { StatVarFacetMap } from "../../shared/types";
+import { FacetMetadata } from "../../types/facet_metadata";
 import { RankingPoint } from "../../types/ranking_unit_types";
 import {
   getContextStatVar,
   getHash,
 } from "../../utils/app/visualization_utils";
+import { getDataCommonsClient } from "../../utils/data_commons_client";
 import {
   getPoint,
   getPointWithin,
   getSeries,
   getSeriesWithin,
 } from "../../utils/data_fetch_utils";
-import { datacommonsClient } from "../../utils/datacommons_client";
 import { getPlaceNames, getPlaceType } from "../../utils/place_utils";
 import { getDateRange } from "../../utils/string_utils";
 import {
+  clearContainer,
   getDenomInfo,
   getFirstCappedStatVarSpecDate,
   getNoDataErrorMsg,
   getStatFormat,
   getStatVarNames,
   ReplacementStrings,
-  showError,
   transformCsvHeader,
 } from "../../utils/tile_utils";
 import { ChartTileContainer } from "./chart_tile";
@@ -96,6 +119,19 @@ interface BarTileSpecificSpec {
   xLabelLinkRoot?: string;
   // Y-axis margin / text width
   yAxisMargin?: number;
+  // Optional: only load this component when it's near the viewport
+  lazyLoad?: boolean;
+  /**
+   * Optional: If lazy loading is enabled, load the component when it is within
+   * this margin of the viewport. Default: "0px"
+   */
+  lazyLoadMargin?: string;
+  // Optional: listen for property value changes with this event name
+  subscribe?: string;
+  // Optional: Disable the entity href link for this component
+  disableEntityLink?: boolean;
+  // Metadata for the facet to highlight.
+  highlightFacet?: FacetMetadata;
 }
 
 export type BarTilePropType = MultiOrContainedInPlaceMultiVariableTileType &
@@ -104,7 +140,12 @@ export type BarTilePropType = MultiOrContainedInPlaceMultiVariableTileType &
 
 export interface BarChartData {
   dataGroup: DataGroup[];
+  // A set of string sources (URLs)
   sources: Set<string>;
+  // A full set of the facets used within the chart
+  facets: Record<string, StatMetadata>;
+  // A mapping of which stat var used which facets
+  statVarToFacets: StatVarFacetMap;
   unit: string;
   dateRange: string;
   props: BarTilePropType;
@@ -112,22 +153,38 @@ export interface BarChartData {
   errorMsg: string;
   // name of place, used for title replacement strings
   placeName?: string;
+  // Set if the component receives a date value from a subscribed event
+  dateOverride?: string;
 }
 
-export function BarTile(props: BarTilePropType): JSX.Element {
+export function BarTile(props: BarTilePropType): ReactElement {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [dateOverride, setDateOverride] = useState(null);
   const [barChartData, setBarChartData] = useState<BarChartData | undefined>(
     null
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const { shouldLoad, containerRef } = useLazyLoad(props.lazyLoadMargin);
   useEffect(() => {
-    if (!barChartData || !_.isEqual(barChartData.props, props)) {
-      (async () => {
-        const data = await fetchData(props);
-        setBarChartData(data);
+    if (props.lazyLoad && !shouldLoad) {
+      return;
+    }
+    if (
+      !barChartData ||
+      !_.isEqual(barChartData.props, props) ||
+      !_.isEqual(barChartData.dateOverride, dateOverride)
+    ) {
+      (async (): Promise<void> => {
+        try {
+          setIsLoading(true);
+          const data = await fetchData(props, dateOverride);
+          setBarChartData(data);
+        } finally {
+          setIsLoading(false);
+        }
       })();
     }
-  }, [props, barChartData]);
-
+  }, [props, barChartData, shouldLoad, dateOverride]);
   const drawFn = useCallback(() => {
     if (_.isEmpty(barChartData)) {
       return;
@@ -136,25 +193,96 @@ export function BarTile(props: BarTilePropType): JSX.Element {
   }, [props, barChartData]);
 
   useDrawOnResize(drawFn, chartContainerRef.current);
+
+  /**
+   * Updates the bar tile date when receiving events on the ${props.subscribe}
+   * channel. Used to connect the datacommons-slider component to this
+   * component
+   */
+  useEffect(() => {
+    const eventHandler = (e: CustomEvent<ChartEventDetail>): void => {
+      if (e.detail.property === "date") {
+        setDateOverride(e.detail.value);
+      }
+    };
+
+    if (props.subscribe) {
+      self.addEventListener(props.subscribe, eventHandler);
+    }
+
+    // Cleanup function to remove the event listener
+    return () => {
+      if (props.subscribe) {
+        self.removeEventListener(props.subscribe, eventHandler);
+      }
+    };
+  }, [props.subscribe]);
+
+  /**
+   * Callback function for building observation specifications.
+   * This is used by the API dialog to generate API calls (e.g., cURL
+   * commands) for the user.
+   *
+   * @returns A function that builds an array of `ObservationSpec`
+   * objects, or `undefined` if chart data is not yet available.
+   */
+  const getObservationSpecs = useMemo(() => {
+    if (!barChartData) {
+      return undefined;
+    }
+    return (): ObservationSpec[] => {
+      const defaultDate =
+        getFirstCappedStatVarSpecDate(props.variables) || "LATEST";
+      if ("places" in props && !_.isEmpty(props.places)) {
+        return buildObservationSpecs({
+          statVarSpecs: props.variables,
+          statVarToFacets: barChartData.statVarToFacets,
+          placeDcids: props.places,
+          defaultDate,
+        });
+      } else if ("enclosedPlaceType" in props && "parentPlace" in props) {
+        const entityExpression = `${props.parentPlace}<-containedInPlace+{typeOf:${props.enclosedPlaceType}}`;
+        return buildObservationSpecs({
+          statVarSpecs: props.variables,
+          statVarToFacets: barChartData.statVarToFacets,
+          entityExpression,
+          defaultDate,
+        });
+      }
+      return [];
+    };
+  }, [barChartData, props]);
+
   return (
     <ChartTileContainer
-      id={props.id}
-      title={props.title}
-      subtitle={props.subtitle}
-      sources={props.sources || (barChartData && barChartData.sources)}
-      replacementStrings={getReplacementStrings(barChartData)}
-      className={`${props.className} bar-chart`}
       allowEmbed={true}
-      getDataCsv={getDataCsvCallback(props)}
-      isInitialLoading={_.isNull(barChartData)}
+      apiRoot={props.apiRoot}
+      className={`${props.className} bar-chart`}
       exploreLink={props.showExploreMore ? getExploreLink(props) : null}
-      hasErrorMsg={barChartData && !!barChartData.errorMsg}
       footnote={props.footnote}
+      getDataCsv={getDataCsvCallback(props)}
+      getObservationSpecs={getObservationSpecs}
+      errorMsg={barChartData && barChartData.errorMsg}
+      id={props.id}
+      isInitialLoading={_.isNull(barChartData)}
+      isLoading={isLoading}
+      replacementStrings={getReplacementStrings(barChartData)}
+      sources={props.sources || (barChartData && barChartData.sources)}
+      facets={barChartData?.facets}
+      statVarToFacets={barChartData?.statVarToFacets}
+      subtitle={props.subtitle}
+      title={props.title}
+      statVarSpecs={props.variables}
+      forwardRef={containerRef}
+      chartHeight={props.svgChartHeight}
     >
       <div
         id={props.id}
         className="svg-container"
-        style={{ minHeight: props.svgChartHeight }}
+        style={{
+          minHeight: props.svgChartHeight,
+          display: barChartData && barChartData.errorMsg ? "none" : "block",
+        }}
         ref={chartContainerRef}
       ></div>
     </ChartTileContainer>
@@ -168,6 +296,7 @@ export function BarTile(props: BarTilePropType): JSX.Element {
  */
 function getDataCsvCallback(props: BarTilePropType): () => Promise<string> {
   return () => {
+    const dataCommonsClient = getDataCommonsClient(props.apiRoot);
     // Assume all variables will have the same date
     // TODO: Handle different dates for different variables
     const date = getFirstCappedStatVarSpecDate(props.variables);
@@ -179,8 +308,18 @@ function getDataCsvCallback(props: BarTilePropType): () => Promise<string> {
       : undefined;
     // Check for !("places" in props) because parentPlace can be set even if
     // "places" is also set
-    if (!("places" in props)) {
-      return datacommonsClient.getCsv({
+    if ("places" in props && !_.isEmpty(props.places)) {
+      return dataCommonsClient.getCsv({
+        date,
+        entityProps,
+        entities: props.places,
+        fieldDelimiter: CSV_FIELD_DELIMITER,
+        perCapitaVariables,
+        transformHeader: transformCsvHeader,
+        variables: props.variables.map((v) => v.statVar),
+      });
+    } else if ("enclosedPlaceType" in props && "parentPlace" in props) {
+      return dataCommonsClient.getCsv({
         childType: props.enclosedPlaceType,
         date,
         entityProps,
@@ -190,17 +329,8 @@ function getDataCsvCallback(props: BarTilePropType): () => Promise<string> {
         transformHeader: transformCsvHeader,
         variables: props.variables.map((v) => v.statVar),
       });
-    } else {
-      return datacommonsClient.getCsv({
-        date,
-        entityProps,
-        entities: props.places,
-        fieldDelimiter: CSV_FIELD_DELIMITER,
-        perCapitaVariables,
-        transformHeader: transformCsvHeader,
-        variables: props.variables.map((v) => v.statVar),
-      });
     }
+    return new Promise(() => "Error fetching CSV");
   };
 }
 
@@ -215,35 +345,76 @@ export function getReplacementStrings(
   };
 }
 
-export const fetchData = async (props: BarTilePropType) => {
-  const statSvs = props.variables
-    .map((spec) => spec.statVar)
-    .filter((sv) => !!sv);
-  const denomSvs = props.variables
-    .map((spec) => spec.denom)
-    .filter((sv) => !!sv);
+export const fetchData = async (
+  props: BarTilePropType,
+  dateOverride?: string
+): Promise<BarChartData> => {
+  /*
+   In order to accommodate facet selection while keeping the stat var/facet relationship,
+   we group stat vars by their facets.
+  */
+  const svsByFacet = _.groupBy(props.variables, (spec) => spec.facetId || "");
   // Assume all variables will have the same date
   // TODO: Update getCsv to handle different dates for different variables
-  const date = getFirstCappedStatVarSpecDate(props.variables);
+  const date = getFirstCappedStatVarSpecDate(props.variables, dateOverride);
   const apiRoot = props.apiRoot || "";
-  let statPromise: Promise<PointApiResponse>;
+
+  /*
+    Each of the facet groupings above will get its own data fetch (using getPoint
+    or getPointWithin) in order to apply the correct facet to the correct stat var.
+   */
+  const statPromises: Promise<PointApiResponse>[] = [];
+  if ("places" in props && !_.isEmpty(props.places)) {
+    for (const facetId in svsByFacet) {
+      const svSpecs = svsByFacet[facetId];
+      const statSvs = svSpecs.map((spec) => spec.statVar).filter(Boolean);
+      if (_.isEmpty(statSvs)) continue;
+      statPromises.push(
+        getPoint(
+          apiRoot,
+          props.places,
+          statSvs,
+          date,
+          [statSvs],
+          props.highlightFacet,
+          facetId ? [facetId] : undefined
+        )
+      );
+    }
+  } else if ("enclosedPlaceType" in props && "parentPlace" in props) {
+    for (const facetId in svsByFacet) {
+      const svSpecs = svsByFacet[facetId];
+      const statSvs = svSpecs.map((spec) => spec.statVar).filter(Boolean);
+      if (_.isEmpty(statSvs)) continue;
+      statPromises.push(
+        getPointWithin(
+          apiRoot,
+          props.enclosedPlaceType,
+          props.parentPlace,
+          statSvs,
+          date,
+          [statSvs],
+          facetId ? [facetId] : undefined
+        )
+      );
+    }
+  }
+
+  const denomSvs = props.variables.map((spec) => spec.denom).filter(Boolean);
   let denomPromise: Promise<SeriesApiResponse>;
   let filterPromise: Promise<PointApiResponse>;
   if ("places" in props && !_.isEmpty(props.places)) {
-    statPromise = getPoint(apiRoot, props.places, statSvs, date, [statSvs]);
-    filterPromise = getPoint(apiRoot, props.places, [FILTER_STAT_VAR], "");
+    filterPromise = getPoint(
+      apiRoot,
+      props.places,
+      [FILTER_STAT_VAR],
+      "",
+      undefined
+    );
     denomPromise = _.isEmpty(denomSvs)
       ? Promise.resolve(null)
-      : getSeries(apiRoot, props.places, denomSvs);
+      : getSeries(apiRoot, props.places, denomSvs, []);
   } else if ("enclosedPlaceType" in props && "parentPlace" in props) {
-    statPromise = getPointWithin(
-      apiRoot,
-      props.enclosedPlaceType,
-      props.parentPlace,
-      statSvs,
-      date,
-      [statSvs]
-    );
     filterPromise = getPointWithin(
       apiRoot,
       props.enclosedPlaceType,
@@ -260,10 +431,19 @@ export const fetchData = async (props: BarTilePropType) => {
           denomSvs
         );
   }
+
   try {
-    const statResp = await statPromise;
-    const denomResp = await denomPromise;
-    const filterResp = await filterPromise;
+    const [statResps, denomResp, filterResp] = await Promise.all([
+      Promise.all(statPromises),
+      denomPromise,
+      filterPromise,
+    ]);
+    const statResp: PointApiResponse = { data: {}, facets: {} };
+    for (const resp of statResps) {
+      Object.assign(statResp.data, resp.data);
+      Object.assign(statResp.facets, resp.facets);
+    }
+
     // Find the most populated places.
     const popPoints: RankingPoint[] = [];
     // Non-place entities won't have a value for Count_Person.
@@ -294,12 +474,12 @@ export const fetchData = async (props: BarTilePropType) => {
     } else if (props.sort === "ascendingPopulation") {
       popPoints.sort((a, b) => a.value - b.value);
     }
-
     const placeNames = await getPlaceNames(
       Array.from(popPoints).map((x) => x.placeDcid),
       {
         apiRoot: props.apiRoot,
         prop: props.placeNameProp,
+        locale: intl.locale,
       }
     );
     const placeType =
@@ -323,7 +503,8 @@ export const fetchData = async (props: BarTilePropType) => {
       popPoints,
       placeNames,
       placeType,
-      statVarDcidToName
+      statVarDcidToName,
+      dateOverride
     );
   } catch (error) {
     console.log(error);
@@ -338,11 +519,14 @@ function rawToChart(
   popPoints: RankingPoint[],
   placeNames: Record<string, string>,
   placeType: string,
-  statVarNames: Record<string, string>
+  statVarNames: Record<string, string>,
+  dateOverride?: string
 ): BarChartData {
   const raw = _.cloneDeep(statData);
   const dataGroups: DataGroup[] = [];
   const sources = new Set<string>();
+  const facets: Record<string, StatMetadata> = {};
+  const statVarToFacets: StatVarFacetMap = {};
   // Track original order of stat vars in props, to maintain 1:1 pairing of
   // colors to stat var labels even after sorting
   const statVarOrder = props.variables.map(
@@ -359,7 +543,9 @@ function rawToChart(
       if (!raw.data[statVar] || _.isEmpty(raw.data[statVar][placeDcid])) {
         continue;
       }
-      const stat = raw.data[statVar][placeDcid];
+      const stat = Array.isArray(raw.data[statVar][placeDcid])
+        ? raw.data[statVar][placeDcid][0]
+        : raw.data[statVar][placeDcid];
       const dataPoint = {
         label: statVarNames[statVar],
         value: stat.value || 0,
@@ -369,6 +555,11 @@ function rawToChart(
       dates.add(stat.date);
       if (raw.facets[stat.facet]) {
         sources.add(raw.facets[stat.facet].provenanceUrl);
+        facets[stat.facet] = raw.facets[stat.facet];
+        if (!statVarToFacets[statVar]) {
+          statVarToFacets[statVar] = new Set();
+        }
+        statVarToFacets[statVar].add(stat.facet);
       }
       if (spec.denom) {
         const denomInfo = getDenomInfo(spec, denomData, placeDcid, stat.date);
@@ -378,6 +569,19 @@ function rawToChart(
         }
         dataPoint.value /= denomInfo.value;
         sources.add(denomInfo.source);
+        const denomStatVar = spec.denom;
+        const denomSeries = denomData.data?.[denomStatVar]?.[placeDcid];
+        if (denomSeries?.facet) {
+          const denomFacetId = denomSeries.facet;
+          const denomFacetMetadata = denomData.facets?.[denomFacetId];
+          if (denomFacetMetadata) {
+            facets[denomFacetId] = denomFacetMetadata;
+            if (!statVarToFacets[denomStatVar]) {
+              statVarToFacets[denomStatVar] = new Set<string>();
+            }
+            statVarToFacets[denomStatVar].add(denomFacetId);
+          }
+        }
       }
       if (scaling) {
         dataPoint.value *= scaling;
@@ -449,12 +653,15 @@ function rawToChart(
   return {
     dataGroup: dataGroups.slice(0, props.maxPlaces || NUM_PLACES),
     sources,
+    facets,
+    statVarToFacets,
     dateRange: getDateRange(Array.from(dates)),
     unit,
     props,
     statVarOrder,
     errorMsg,
     placeName,
+    dateOverride,
   };
 }
 
@@ -467,7 +674,7 @@ export function draw(
   chartTitle?: string
 ): void {
   if (chartData.errorMsg) {
-    showError(chartData.errorMsg, svgContainer);
+    clearContainer(svgContainer);
     return;
   }
   if (props.horizontal) {
@@ -506,6 +713,7 @@ export function draw(
           title: chartTitle,
           unit: chartData.unit,
           useSvgLegend,
+          disableEntityLink: props.disableEntityLink,
         }
       );
     } else {
@@ -523,6 +731,7 @@ export function draw(
           title: chartTitle,
           unit: chartData.unit,
           useSvgLegend,
+          disableEntityLink: props.disableEntityLink,
         }
       );
     }
@@ -547,7 +756,7 @@ function getExploreLink(props: BarTilePropType): {
     {}
   );
   return {
-    displayText: "Timeline Tool",
+    displayText: intl.formatMessage(messages.timelineTool),
     url: `${props.apiRoot || ""}${URL_PATH}#${hash}`,
   };
 }

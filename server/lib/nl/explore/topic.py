@@ -16,7 +16,7 @@
 from collections import OrderedDict
 from dataclasses import dataclass
 import time
-from typing import List
+from typing import List, Set, Tuple
 
 import server.lib.nl.common.topic as topic
 import server.lib.nl.common.utils as cutils
@@ -40,7 +40,7 @@ _MAX_SUBTOPIC_SV_LIMIT_SDG = 500
 # ILO, etc).  But as a limit we have a total #var limit.
 _MAX_TOPICS_TO_OPEN_SPECIAL_DC = 10
 _MAX_SUBTOPIC_SV_LIMIT_SPECIAL_DC = 100
-_MAX_SVS_TO_PROCESS_SPECIAL_DC = 500
+_MAX_SVS_TO_PROCESS = 500
 
 
 @dataclass
@@ -53,8 +53,6 @@ class TopicMembers:
 def compute_chart_vars(
     state: ftypes.PopulateState) -> OrderedDict[str, List[ftypes.ChartVars]]:
   num_topics_limit = _max_topics_to_open(state.uttr)
-  # Only Special DC has an SV limit.
-  num_svs_limit = _max_svs_to_process(state.uttr)
 
   dc = state.uttr.insight_ctx.get(Params.DC.value, DCNames.MAIN_DC.value)
   chart_vars_map = OrderedDict()
@@ -78,7 +76,7 @@ def compute_chart_vars(
       for e in cv:
         num_svs_processed += len(e.svs)
       chart_vars_map[sv] = cv
-    if num_svs_limit and num_svs_processed >= num_svs_limit:
+    if num_svs_processed >= _MAX_SVS_TO_PROCESS:
       break
   return chart_vars_map
 
@@ -100,11 +98,14 @@ def compute_correlation_chart_vars(
 
   # To not go crazy with api calls, don't handle more than one topic on each
   # side.
+  added_pairs = set()
   found_lhs_topic = False
   found_rhs_topic = False
+  lhs_svs, rhs_svs = _match_lists(lhs_svs, rhs_svs)
   for lsv, rsv in zip(lhs_svs, rhs_svs):
-    cvlist = _compute_correlation_chart_vars_for_pair(state, lsv, rsv)
-    chart_vars_map[lsv] = cvlist
+    cvlist = _compute_correlation_chart_vars_for_pair(state, lsv, rsv,
+                                                      added_pairs)
+    chart_vars_map.setdefault(lsv, []).extend(cvlist)
 
     found_lhs_topic |= cutils.is_topic(lsv)
     found_rhs_topic |= cutils.is_topic(rsv)
@@ -114,12 +115,24 @@ def compute_correlation_chart_vars(
   return chart_vars_map
 
 
+# Matches lists by repeating the first entry of the shorter list.
+def _match_lists(l1: List[str], l2: List[str]) -> Tuple[List[str], List[str]]:
+  if len(l1) < len(l2):
+    new_l1 = l1 + [l1[0]] * (len(l2) - len(l1))
+    return new_l1, l2
+  if len(l2) < len(l1):
+    new_l2 = l2 + [l2[0]] * (len(l1) - len(l2))
+    return l1, new_l2
+  return l1, l2
+
+
 #
 # Compute correlation chart-vars for a given pair of LHS and RHS var
 # that are user-provided. Note that either/both of them can be a topic.
 #
 def _compute_correlation_chart_vars_for_pair(state: ftypes.PopulateState,
-                                             lhs_orig: str, rhs_orig: str):
+                                             lhs_orig: str, rhs_orig: str,
+                                             added_pairs: Set[str]):
   dc = state.uttr.insight_ctx.get(Params.DC.value, DCNames.MAIN_DC.value)
 
   # Get vars.
@@ -135,15 +148,14 @@ def _compute_correlation_chart_vars_for_pair(state: ftypes.PopulateState,
   rhs_svs = _vars(rhs_orig)
 
   # Mix and match them.
-  added = set()
   chart_vars = []
 
   def _add(lsv, rsv):
     # Ensure sv1,sv2 vs. sv2,sv1 are deduped
     k = ''.join(sorted([lsv, rsv]))
-    if lsv == rsv or k in added:
+    if lsv == rsv or k in added_pairs:
       return
-    added.add(k)
+    added_pairs.add(k)
     chart_vars.append(
         ftypes.ChartVars(svs=[lsv, rsv],
                          orig_sv_map={
@@ -287,6 +299,10 @@ def _direct_chart_vars(svs: List[str], svpgs: List[str], source_topic: str,
 
 
 def _max_subtopic_sv_limit(state: ftypes.PopulateState) -> int:
+  # If there was a limit specified in the insight context, use that limit.
+  if state.uttr.insight_ctx.get(Params.MAX_TOPIC_SVS) != None:
+    return state.uttr.insight_ctx[Params.MAX_TOPIC_SVS]
+  # Otherwise, use default limits depending on the dc
   if is_sdg(state.uttr.insight_ctx):
     return _MAX_SUBTOPIC_SV_LIMIT_SDG
   if is_special_dc(state.uttr.insight_ctx):
@@ -295,6 +311,10 @@ def _max_subtopic_sv_limit(state: ftypes.PopulateState) -> int:
 
 
 def _max_topics_to_open(uttr: ftypes.Utterance) -> int:
+  # If there was a limit specified in the insight context, use that limit.
+  if uttr.insight_ctx.get(Params.MAX_TOPICS) != None:
+    return uttr.insight_ctx[Params.MAX_TOPICS]
+  # Otherwise, use default limits depending on the dc
   if not is_sdg(uttr.insight_ctx) and is_special_dc(uttr.insight_ctx):
     max_topics = _MAX_TOPICS_TO_OPEN_SPECIAL_DC
   elif uttr.places and cutils.is_us_place(uttr.places[0]):
@@ -304,10 +324,3 @@ def _max_topics_to_open(uttr: ftypes.Utterance) -> int:
     # since there are fewer vars.
     max_topics = _MAX_TOPICS_TO_OPEN
   return max_topics
-
-
-def _max_svs_to_process(uttr: ftypes.Utterance) -> int:
-  if not is_sdg(uttr.insight_ctx) and is_special_dc(uttr.insight_ctx):
-    return _MAX_SVS_TO_PROCESS_SPECIAL_DC
-  # No special limit
-  return 0

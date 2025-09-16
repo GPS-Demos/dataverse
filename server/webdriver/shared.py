@@ -13,16 +13,25 @@
 # limitations under the License.
 """Common library for functions used by multiple webdriver tests"""
 
+import urllib
+import urllib.request
+
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 
-LOADING_WAIT_TIME_SEC = 3
+from server.webdriver.base_utils import find_elem
+from server.webdriver.base_utils import find_elems
+from server.webdriver.base_utils import TIMEOUT
+from server.webdriver.base_utils import wait_elem
+
+LOADING_WAIT_TIME_SEC = 10
 MAX_NUM_SPINNERS = 3
 ASYNC_ELEMENT_HOLDER_CLASS = 'dc-async-element-holder'
 ASYNC_ELEMENT_CLASS = 'dc-async-element'
-TIMEOUT = 60
+
 # Keep in sync with the web component definitions at static/library/*component.ts
 # and packages/web-components/src/main.ts
 WEB_COMPONENT_TAG_NAMES = [
@@ -54,21 +63,37 @@ def wait_for_loading(driver):
 
 def click_sv_group(driver, svg_name):
   """In the stat var widget, click on the stat var group titled svg_name."""
-  sv_groups = driver.find_elements(By.CLASS_NAME, 'node-title')
-  for group in sv_groups:
-    if svg_name in group.text:
-      group.click()
-      break
+  xpath_selector = f"//div[contains(@class, 'node-title') and .//*[contains(text(), '{svg_name}')]]"
+  click_el(driver, (By.XPATH, xpath_selector))
+
+
+def click_el(driver, element_locator):
+  """Waits for an element with the given locator to be clickable, then clicks it.
+
+  Returns the clicked element.
+  """
+  element_clickable = EC.element_to_be_clickable(element_locator)
+  WebDriverWait(driver, TIMEOUT).until(element_clickable)
+  element = driver.find_element(*element_locator)
+  element.click()
+  return element
 
 
 def select_source(driver, source_name, sv_dcid):
   """With the source selector modal open, choose the source with name
-    source_name for variable with dcid sv_dcid"""
+  source_name for variable with dcid sv_dcid. source_name can be a string
+  or a list of strings, to allow for differences due to feature flags."""
+  if isinstance(source_name, str):
+    source_names_to_check = [source_name]
+  else:
+    source_names_to_check = source_name
+
   wait_for_loading(driver)
   source_options = driver.find_elements(By.NAME, sv_dcid)
   for option in source_options:
     parent = option.find_element(By.XPATH, '..')
-    if source_name in parent.text:
+    parent_text = parent.text
+    if any(name in parent_text for name in source_names_to_check):
       option.click()
       wait_for_loading(driver)
       break
@@ -104,3 +129,104 @@ def charts_rendered(driver):
     if not dom_id:
       return False
   return True
+
+
+def safe_url_open(url):
+  """Execute urlopen and assert success."""
+  if not url.lower().startswith('http'):
+    raise ValueError(f'Invalid scheme in {url}. Expected http(s)://.')
+
+  req = urllib.request.Request(url)
+  if url.startswith('http'):
+    with urllib.request.urlopen(req) as response:  # nosec B310
+      return response.getcode()
+  return 0
+
+
+def assert_topics(self, driver, path_to_topics, classname, expected_topics):
+  """Assert the topics on the place page."""
+  item_list_items = find_elems(driver,
+                               by=By.CLASS_NAME,
+                               value=classname,
+                               path_to_elem=path_to_topics)
+
+  # Assert that the number of found elements matches the expected number
+  self.assertEqual(len(item_list_items), len(expected_topics))
+
+  # Iterate through the elements and assert their text content
+  for item, expected_text in zip(item_list_items, expected_topics):
+    self.assertEqual(item.text, expected_text)
+
+
+def search_for_places(self,
+                      driver,
+                      search_term,
+                      place_type,
+                      is_new_vis_tools=True):
+  """Interacts with a visualization tool page to manually search for places.
+
+  - Enters the given term in the search bar
+  - Clicks the first autocomplete response
+  - Selects the given place type from the options.
+
+  When is_new_vis_tools=True (default), expects the DOM of the newer version
+  of the visualization tools.
+  """
+  if is_new_vis_tools:
+    _search_for_places(self, driver, search_term, place_type)
+  else:
+    _search_for_places_old(self, driver, search_term, place_type)
+
+
+def _search_for_places_old(self, driver, search_term, place_type):
+  # Type term into the search box.
+  search_box_input = find_elem(driver, by=By.ID, value='ac')
+  search_box_input.send_keys(search_term)
+
+  # Wait until there is at least one result in autocomplete results.
+  self.assertIsNotNone(wait_elem(driver, value='pac-item'))
+
+  # Click on the first result.
+  click_el(driver, (By.CSS_SELECTOR, '.pac-item:nth-child(1)'))
+  wait_for_loading(driver)
+  self.assertIsNotNone(wait_elem(driver, value='chip'))
+
+  # Choose place type
+  wait_for_loading(driver)
+  place_selector_place_type = find_elem(driver,
+                                        by=By.ID,
+                                        value='place-selector-place-type')
+  Select(place_selector_place_type).select_by_value(place_type)
+  wait_for_loading(driver)
+
+
+def _search_for_places(self, driver, search_term, place_type):
+  # Click start
+  click_el(driver, (By.CLASS_NAME, 'start-button'))
+
+  # Type term into the search box.
+  wait_elem(self.driver, by=By.ID, value='location-field')
+  search_box_input = self.driver.find_element(By.ID, 'ac')
+  search_box_input.send_keys(search_term)
+
+  # Wait until there is at least one result in autocomplete results.
+  self.assertIsNotNone(wait_elem(driver, value='pac-item'))
+
+  # Click on the first result.
+  click_el(driver, (By.CSS_SELECTOR, '.pac-item:nth-child(1)'))
+  wait_for_loading(driver)
+
+  # Click continue
+  click_el(driver, (By.CLASS_NAME, 'continue-button'))
+
+  # Wait for place types to load and click on one
+  wait_elem(self.driver,
+            by=By.CSS_SELECTOR,
+            value='.place-type-selector .form-check-input')
+  # Find the specific label by its text using XPath and click it
+  place_type_xpath = f"//*[contains(@class, 'place-type-selector')]//label[text()='{place_type}']"
+  click_el(driver, (By.XPATH, place_type_xpath))
+
+  # Click continue
+  click_el(driver, (By.CLASS_NAME, 'continue-button'))
+  wait_for_loading(self.driver)

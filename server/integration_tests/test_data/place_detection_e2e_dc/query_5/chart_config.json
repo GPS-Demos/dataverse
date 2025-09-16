@@ -30,6 +30,7 @@
                 ]
               }
             ],
+            "description": "The total number of people in a population.",
             "title": "Population"
           },
           {
@@ -86,13 +87,168 @@
                 ]
               }
             ],
+            "description": "The percentage change in the total number of people in a population over a specific period.",
             "title": "Rate of Population Growth"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person"
+                    ],
+                    "title": "Median Age of Population in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Median Age of Population in Mexico City",
+                    "statVarKey": [
+                      "Median_Age_Person"
+                    ],
+                    "title": "Median Age of Population in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "description": "The median age of people in a population.",
+            "title": "Median Age of Population"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "barTileSpec": {
+                      "maxPlaces": 15,
+                      "maxVariables": 15,
+                      "sort": "DESCENDING"
+                    },
+                    "comparisonPlaces": [
+                      "wikidataId/Q1489"
+                    ],
+                    "statVarKey": [
+                      "Count_Person_85OrMoreYears_Female_multiple_place_bar_block",
+                      "Count_Person_85OrMoreYears_Male_multiple_place_bar_block"
+                    ],
+                    "title": "Population 85 or Over by Gender in Mexico City (${date})",
+                    "type": "BAR"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population 85 or Over by Gender"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person_Female",
+                      "Count_Person_Male"
+                    ],
+                    "title": "Population by Gender in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population by Gender"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person_ForeignBorn"
+                    ],
+                    "title": "Population: Foreign Born in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Foreign Born in Mexico City",
+                    "statVarKey": [
+                      "Count_Person_ForeignBorn"
+                    ],
+                    "title": "Population: Foreign Born in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population by Nativity"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_BirthEvent"
+                    ],
+                    "title": "Count of Birth Event in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Count of Birth Event in Mexico City",
+                    "statVarKey": [
+                      "Count_BirthEvent"
+                    ],
+                    "title": "Count of Birth Event in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Count of Birth Event"
           }
         ],
         "statVarSpec": {
+          "Count_BirthEvent": {
+            "name": "Count of Birth Event",
+            "statVar": "Count_BirthEvent"
+          },
           "Count_Person": {
             "name": "Population",
             "statVar": "Count_Person"
+          },
+          "Count_Person_85OrMoreYears_Female_multiple_place_bar_block": {
+            "name": "Women over 85",
+            "statVar": "Count_Person_85OrMoreYears_Female"
+          },
+          "Count_Person_85OrMoreYears_Male_multiple_place_bar_block": {
+            "name": "Men over 85",
+            "statVar": "Count_Person_85OrMoreYears_Male"
+          },
+          "Count_Person_Female": {
+            "name": "Women",
+            "statVar": "Count_Person_Female"
+          },
+          "Count_Person_ForeignBorn": {
+            "name": "Population: Foreign Born",
+            "statVar": "Count_Person_ForeignBorn"
+          },
+          "Count_Person_Male": {
+            "name": "Men",
+            "statVar": "Count_Person_Male"
           },
           "Count_Person_PerArea": {
             "name": "Population Density",
@@ -101,6 +257,10 @@
           "GrowthRate_Count_Person": {
             "name": "Rate of Population Growth",
             "statVar": "GrowthRate_Count_Person"
+          },
+          "Median_Age_Person": {
+            "name": "Median Age of Population",
+            "statVar": "Median_Age_Person"
           }
         }
       }
@@ -154,7 +314,20 @@
         ]
       }
     ],
-    "exploreMore": {},
+    "exploreMore": {
+      "Count_BirthEvent": {
+        "gender": [
+          "Count_BirthEvent_Female",
+          "Count_BirthEvent_Male"
+        ]
+      },
+      "Count_Person": {
+        "gender": [
+          "Count_Person_Female",
+          "Count_Person_Male"
+        ]
+      }
+    },
     "mainTopics": [
       {
         "dcid": "dc/topic/Demographics",
@@ -313,6 +486,5 @@
     ]
   },
   "svSource": "CURRENT_QUERY",
-  "userMessage": "",
   "userMessages": []
 }

@@ -12,6 +12,9 @@
 # below:
 .git
 .gitignore
+#!include:.gitignore
+#!include:.dockerignore
+!mcf_parser.py
 
 # Python pycache:
 **/__pycache__/**
@@ -25,5 +28,7 @@ static/node_modules/
 server/dist/
 
 **/.env/
+**/.env_website/
+**/.env_nl/
 
 screenshots/*.png

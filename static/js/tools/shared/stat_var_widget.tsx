@@ -50,14 +50,11 @@ interface StatVarWidgetPropsType {
   selectSV?: (sv: string) => void;
   // Whether to disable the alert when there are unavailable SVs.
   disableAlert?: boolean;
-  // Number of entities that should have data for each stat var (group) shown
-  numEntitiesExistence?: number;
 }
 
 export function StatVarWidget(props: StatVarWidgetPropsType): JSX.Element {
   // Set up refs for sv widget modal. Widget is tied to the LHS menu but
   // reattached to the modal when it is opened on small screens.
-  const svHierarchyModalRef = createRef<HTMLDivElement>();
   const svHierarchyContainerRef = createRef<HTMLDivElement>();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -129,8 +126,8 @@ export function StatVarWidget(props: StatVarWidgetPropsType): JSX.Element {
             selectedSVs={Object.keys(props.selectedSVs)}
             selectSV={props.selectSV}
             searchLabel={"Statistical variables"}
-            deselectSV={(sv) => props.deselectSVs([sv])}
-            numEntitiesExistence={props.numEntitiesExistence}
+            deselectSV={(sv): void => props.deselectSVs([sv])}
+            numEntitiesExistence={getNumEntitiesExistence()}
           />
         </div>
         <DrawerResize
@@ -159,8 +156,8 @@ export function StatVarWidget(props: StatVarWidgetPropsType): JSX.Element {
             selectedSVs={Object.keys(props.selectedSVs)}
             selectSV={props.selectSV}
             searchLabel={"Statistical variables"}
-            deselectSV={(sv) => props.deselectSVs([sv])}
-            numEntitiesExistence={props.numEntitiesExistence}
+            deselectSV={(sv): void => props.deselectSVs([sv])}
+            numEntitiesExistence={getNumEntitiesExistence()}
           />
         </ModalBody>
         <ModalFooter>
@@ -171,4 +168,23 @@ export function StatVarWidget(props: StatVarWidgetPropsType): JSX.Element {
       </Modal>
     </>
   );
+
+  /**
+   * Get number of required entities for stat var filtering.
+   *
+   * NumEntitiesExistence is a parameter that sets the number of entities that
+   * should have data for each stat var (group) shown in the widget. For
+   * example, setting a value of 10 means that at least 10 entities must have
+   * data for a stat var for that stat var to show in the widget. This prevents
+   * showing users stat vars with low geographic coverage that lead to sparse
+   * charts.
+   *
+   * @returns minimum number of entities to use for stat var filtering
+   */
+  function getNumEntitiesExistence(): number {
+    return Math.min(
+      globalThis.minStatVarGeoCoverage || 1,
+      props.sampleEntities.length
+    );
+  }
 }

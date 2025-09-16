@@ -150,7 +150,7 @@ export async function getStatAllWithinPlace(
  * @param key
  * @param isX
  */
-function addSuffix(key: string, isX: boolean) {
+function addSuffix(key: string, isX: boolean): string {
   return `${key}${isX ? "x" : "y"}`;
 }
 
@@ -290,7 +290,8 @@ export function updateHash(context: ContextType): void {
   const newHash = encodeURIComponent(hash);
   const currentHash = location.hash.replace("#", "");
   if (newHash && newHash !== currentHash) {
-    history.pushState({}, "", `${SCATTER_URL_PATH}#${newHash}`);
+    const queryParams = window.location.search;
+    history.pushState({}, "", `${SCATTER_URL_PATH}${queryParams}#${newHash}`);
   }
 }
 
@@ -368,7 +369,7 @@ export function updateHashPlace(hash: string, place: PlaceInfo): string {
 function updateHashDisplayOptions(
   hash: string,
   display: DisplayOptionsWrapper
-) {
+): string {
   hash = updateHashBoolean(
     hash,
     FieldToAbbreviation.showQuadrant,

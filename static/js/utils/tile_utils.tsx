@@ -21,31 +21,23 @@
 import axios from "axios";
 import * as d3 from "d3";
 import _ from "lodash";
-import React from "react";
 
-import { NL_SOURCE_REPLACEMENTS } from "../constants/app/explore_constants";
 import { SELF_PLACE_DCID_PLACEHOLDER } from "../constants/subject_page_constants";
 import { CSV_FIELD_DELIMITER } from "../constants/tile_constants";
-import {
-  GA_EVENT_TILE_EXPLORE_MORE,
-  GA_PARAM_URL,
-  triggerGAEvent,
-} from "../shared/ga_events";
+import { intl } from "../i18n/i18n";
+import { messages } from "../i18n/i18n_messages";
 import { PointApiResponse, SeriesApiResponse } from "../shared/stat_types";
 import { getStatsVarLabel } from "../shared/stats_var_labels";
 import { NamedTypedPlace, StatVarSpec } from "../shared/types";
-import { getCappedStatVarDate, urlToDisplayText } from "../shared/util";
+import { getCappedStatVarDate } from "../shared/util";
 import { getMatchingObservation } from "../tools/shared_util";
 import { EventTypeSpec, TileConfig } from "../types/subject_page_proto_types";
 import { stringifyFn } from "./axios";
-import { isNlInterface } from "./explore_utils";
 import { getUnit } from "./stat_metadata_utils";
+import { addPerCapitaToTitle } from "./subject_page_utils";
 
 const DEFAULT_PC_SCALING = 100;
 const DEFAULT_PC_UNIT = "%";
-const ERROR_MSG_PC = "Sorry, could not calculate per capita.";
-const ERROR_MSG_DEFAULT = "Sorry, we do not have this data.";
-const NUM_FRACTION_DIGITS = 1;
 const SUPER_SCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 
 /**
@@ -165,7 +157,7 @@ export function getStatVarName(
  * vars in a statVarSpec collection.
  * Different from getStatVarName() in that if a stat var's name is not provided
  * in its spec, will try to query the name though an api call.
- * @param statVarSpecs specs of stat vars to get names for
+ * @param statVarSpec specs of stat vars to get names for
  * @param apiRoot api root to use for api
  * @param getProcessedName If provided, use this function to get the processed
  *        stat var names.
@@ -196,7 +188,7 @@ export async function getStatVarNames(
   });
 
   // Promise that returns an object where key is stat var dcid and value is name
-  let statVarNamesPromise;
+  let statVarNamesPromise: Promise<Record<string, string>>;
   // If all names were provided by statVarSpec or stats_var_labels.json
   // skip propval api call
   if (_.isEmpty(statVarDcids)) {
@@ -331,54 +323,6 @@ export function getTileEventTypeSpecs(
   return relevantEventSpecs;
 }
 
-/**
- * Gets the JSX element for displaying a list of sources.
- */
-export function TileSources(props: {
-  sources: Set<string> | string[];
-}): JSX.Element {
-  const { sources } = props;
-  if (!sources) {
-    return null;
-  }
-
-  const sourceList: string[] = Array.from(sources);
-  //const seenSourceText = new Set();
-  const sourcesJsx = sourceList.map((source, index) => {
-    // HACK for updating source for NL interface
-    let sourceUrl = source;
-    if (isNlInterface()) {
-      sourceUrl = NL_SOURCE_REPLACEMENTS[source] || source;
-    }
-    const sourceText = urlToDisplayText(sourceUrl);
-    return (
-      <span key={sourceUrl}>
-        {index > 0 ? ", " : ""}
-        <a
-          href={sourceUrl}
-          rel="noreferrer"
-          target="_blank"
-          title={sourceUrl}
-          onClick={(event) => {
-            triggerGAEvent(GA_EVENT_TILE_EXPLORE_MORE, {
-              [GA_PARAM_URL]: sourceUrl,
-            });
-            return true;
-          }}
-        >
-          {sourceText}
-        </a>
-        {globalThis.viaGoogle ? " via Google" : ""}
-      </span>
-    );
-  });
-  return (
-    <div className="sources" {...{ part: "source" }}>
-      Source: {sourcesJsx}
-    </div>
-  );
-}
-
 // Processes a unit string by converting "X^Y" to "X<superscript Y>"
 // e.g., km^2 will be km²
 function getProcessedUnit(unit: string): string {
@@ -402,11 +346,11 @@ export function getStatFormat(
   svSpec: StatVarSpec,
   statPointData?: PointApiResponse,
   statSeriesData?: SeriesApiResponse
-): { unit: string; scaling: number; numFractionDigits: number } {
+): { unit: string; scaling: number; numFractionDigits?: number } {
   const result = {
     unit: svSpec.unit,
     scaling: svSpec.scaling || 1,
-    numFractionDigits: NUM_FRACTION_DIGITS,
+    numFractionDigits: undefined,
   };
   // If unit was specified in the svSpec, use that unit
   if (result.unit) {
@@ -433,7 +377,7 @@ export function getStatFormat(
 
   let overrideConfig = null;
   if (statMetadata) {
-    const isComplexUnit = !!statMetadata.unit?.match(/\[.+ [0-9]+\]/);
+    const isComplexUnit = !!statMetadata.unit?.match(/\[.+ [0-9]+]/);
     // If complex unit, use the unit part to get the override config, otherwise
     // use the whole unit to get the override config.
     const unitStr = isComplexUnit
@@ -475,7 +419,6 @@ interface DenomInfo {
  * @param denomData population data to use for the calculation
  * @param placeDcid place of the data point
  * @param mainStatDate date of the data point
- * @param mainStatUnit unit of the data point
  */
 export function getDenomInfo(
   svSpec: StatVarSpec,
@@ -512,21 +455,18 @@ export function getDenomInfo(
  */
 export function getNoDataErrorMsg(statVarSpec: StatVarSpec[]): string {
   return statVarSpec.findIndex((spec) => !!spec.denom) >= 0
-    ? ERROR_MSG_PC
-    : ERROR_MSG_DEFAULT;
+    ? intl.formatMessage(messages.perCapitaErrorMessage)
+    : intl.formatMessage(messages.noDataErrorMessage);
 }
 
 /**
- * Shows an error message in a container div
- * @param errorMsg the message to show
+ * Removes content from specified container
  * @param container the container div to show the message
  */
-export function showError(errorMsg: string, container: HTMLDivElement): void {
+export function clearContainer(container: HTMLDivElement): void {
   // Remove contents of the container
   const containerSelection = d3.select(container);
   containerSelection.selectAll("*").remove();
-  // Show error message in the container
-  containerSelection.html(errorMsg);
 }
 
 /**
@@ -554,7 +494,7 @@ export function getComparisonPlaces(
  * @param columnHeader CSV column header
  * @returns capitalized column header
  */
-export function transformCsvHeader(columnHeader: string) {
+export function transformCsvHeader(columnHeader: string): string {
   if (columnHeader.length === 0) {
     return columnHeader;
   }
@@ -573,13 +513,35 @@ export function transformCsvHeader(columnHeader: string) {
  * all dates set for a subject page config will have the same date
  *
  * @param variables stat var spec variables
+ * @param date optional override date string. When provided, this date is used
+ *             instead of the date from the first variable.
  * @returns first date found or undefined if stat var spec list is empty
  */
 export function getFirstCappedStatVarSpecDate(
-  variables: StatVarSpec[]
+  variables: StatVarSpec[],
+  date?: string
 ): string {
   if (variables.length === 0) {
     return "";
   }
-  return getCappedStatVarDate(variables[0].statVar, variables[0].date);
+  return getCappedStatVarDate(variables[0].statVar, date || variables[0].date);
+}
+
+/**
+ * Gets the description for a highlight tile given the tile config and block
+ * level denominator
+ *
+ * @param tile the tile config
+ * @param blockDenom the block level denominator
+ * @returns description for the highlight tile
+ */
+export function getHighlightTileDescription(
+  tile: TileConfig,
+  blockDenom?: string
+): string {
+  let description = tile.description.includes("${date}")
+    ? tile.description
+    : tile.description + " (${date})";
+  description = blockDenom ? addPerCapitaToTitle(description) : description;
+  return description;
 }

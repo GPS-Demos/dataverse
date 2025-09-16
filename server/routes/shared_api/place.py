@@ -28,6 +28,8 @@ from markupsafe import escape
 from server.lib import fetch
 from server.lib.cache import cache
 import server.lib.i18n as i18n
+from server.lib.i18n_messages import get_place_type_to_locale_message
+from server.lib.i18n_messages import get_place_type_to_locale_message_plural
 from server.lib.shared import names
 from server.routes import TIMEOUT
 import server.services.datacommons as dc
@@ -108,23 +110,6 @@ PLACE_OVERRIDE = {
     "wikidataId/Q281796": "wikidataId/Q2981389",
 }
 
-# Place type to the message id that holds its translation
-PLACE_TYPE_TO_LOCALE_MESSAGE = {
-    "AdministrativeArea": "singular_administrative_area",
-    "AdministrativeArea<Level>": "singular_administrative_area_level",
-    "Borough": "singular_borough",
-    "City": "singular_city",
-    "Country": "singular_country",
-    "County": "singular_county",
-    "EurostatNUTS<Level>": "singular_eurostat_nuts",
-    "Neighborhood": "singular_neighborhood",
-    "Place": "singular_place",
-    "State": "singular_state",
-    "Town": "singular_town",
-    "Village": "singular_village",
-    "CensusZipCodeTabulationArea": "singular_zip_code",
-}
-
 STATE_EQUIVALENTS = {"State", "AdministrativeArea1"}
 US_ISO_CODE_PREFIX = 'US'
 ENGLISH_LANG = 'en'
@@ -151,18 +136,12 @@ def get_place_type(place_dcids):
   return ret
 
 
-def get_place_type_i18n_name(place_type: str) -> str:
+def get_place_type_i18n_name(place_type: str, plural: bool = False) -> str:
   """For a given place type, get its localized name for display"""
-  if place_type in PLACE_TYPE_TO_LOCALE_MESSAGE:
-    return gettext(PLACE_TYPE_TO_LOCALE_MESSAGE[place_type])
-  elif place_type.startswith('AdministrativeArea'):
-    level = place_type[-1]
-    return gettext(PLACE_TYPE_TO_LOCALE_MESSAGE['AdministrativeArea<Level>'],
-                   level=level)
-  elif place_type.startswith('EurostatNUTS'):
-    level = place_type[-1]
-    return gettext(PLACE_TYPE_TO_LOCALE_MESSAGE['EurostatNUTS<Level>'],
-                   level=level)
+  place_type_to_local_map = get_place_type_to_locale_message_plural(
+  ) if plural else get_place_type_to_locale_message()
+  if place_type in place_type_to_local_map:
+    return place_type_to_local_map[place_type]
   else:
     # Return place type un-camel-cased
     words = re.findall(r'[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))', place_type)
@@ -211,10 +190,6 @@ def get_i18n_name(dcids, should_resolve_all=True):
   locales = i18n.locale_choices(g.locale)
   for dcid in dcids:
     values = response.get(dcid, [])
-    # If there is no nameWithLanguage for this dcid, fall back to name.
-    if not values:
-      dcids_default_name.append(dcid)
-      continue
     result[dcid] = ''
     for locale in locales:
       for entry in values:
@@ -223,6 +198,11 @@ def get_i18n_name(dcids, should_resolve_all=True):
           break
       if result[dcid]:
         break
+
+    if not result[dcid]:
+      # if there is no name with language, default to name.
+      dcids_default_name.append(dcid)
+
   if dcids_default_name:
     if should_resolve_all:
       default_names = names(dcids_default_name)
@@ -676,14 +656,7 @@ def descendent_names():
   return Response(json.dumps(result), 200, mimetype='application/json')
 
 
-@bp.route('/placeid2dcid')
-def placeid2dcid():
-  """API endpoint to get dcid based on place id.
-
-  This is to use together with the Google Maps Autocomplete API:
-  https://developers.google.com/places/web-service/autocomplete.
-  """
-  place_ids = request.args.getlist("placeIds")
+def findplacedcid(place_ids):
   if not place_ids:
     return 'error: must provide `placeIds` field', 400
   resp = fetch.resolve_id(place_ids, "placeId", "dcid")
@@ -695,6 +668,16 @@ def placeid2dcid():
         dcid = PLACE_OVERRIDE[dcid]
       result[place_id] = dcid
   return Response(json.dumps(result), 200, mimetype='application/json')
+
+
+@bp.route('/placeid2dcid')
+def placeid2dcid():
+  """API endpoint to get dcid based on place id.
+  This is to use together with the Google Maps Autocomplete API:
+  https://developers.google.com/places/web-service/autocomplete.
+  """
+  place_ids = request.args.getlist("placeIds")
+  return findplacedcid(place_ids)
 
 
 @bp.route('/coords2places')

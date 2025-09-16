@@ -39,7 +39,7 @@ import server.lib.nl.detection.context as context
 import server.lib.nl.detection.detector as detector
 from server.lib.nl.detection.place import get_place_from_dcids
 from server.lib.nl.detection.types import Detection
-from server.lib.nl.detection.types import LlmApiType
+from server.lib.nl.detection.types import DetectionArgs
 from server.lib.nl.detection.types import Place
 from server.lib.nl.detection.types import RequestedDetectorType
 from server.lib.nl.detection.utils import create_utterance
@@ -61,7 +61,9 @@ _SANITY_TEST = 'sanity'
 # Get the default place to be used for fulfillment. If there is a place in the
 # request, use that. Otherwise, use pre-chosen places.
 def _get_default_place(request: Dict, is_special_dc: bool, debug_logs: Dict):
-  default_place_dcid = request.args.get('default_place', default='', type=str)
+  default_place_dcid = request.args.get(params.Params.DEFAULT_PLACE,
+                                        default='',
+                                        type=str)
   # If default place from request is earth, use the Earth place object
   if default_place_dcid == constants.EARTH.dcid:
     return constants.EARTH
@@ -96,7 +98,8 @@ def parse_query_and_detect(request: Dict, backend: str, client: str,
   i18n = i18n_str and i18n_str.lower() == 'true'
 
   # Index-type default is in nl_server.
-  embeddings_index_type = request.args.get('idx', '')
+  idx_param_str = request.args.get(params.Params.INDEX.value, '')
+  embeddings_index_types = [x.strip() for x in idx_param_str.split(',')]
   original_query = request.args.get('q')
   if not original_query:
     err_json = helpers.abort(
@@ -109,12 +112,12 @@ def parse_query_and_detect(request: Dict, backend: str, client: str,
   if request.get_json():
     context_history = request.get_json().get('contextHistory', [])
   dc = request.get_json().get('dc', '')
-  embeddings_index_type = params.dc_to_embedding_type(dc, embeddings_index_type)
+  embeddings_index_types = params.dc_to_embedding_types(dc,
+                                                        embeddings_index_types)
 
-  detector_type = request.args.get(
-      'detector',
-      default=RequestedDetectorType.HybridSafetyCheck.value,
-      type=str)
+  detector_type = request.args.get(params.Params.DETECTOR.value,
+                                   default=RequestedDetectorType.Hybrid.value,
+                                   type=str)
 
   # mode param
   use_default_place = True
@@ -122,6 +125,9 @@ def parse_query_and_detect(request: Dict, backend: str, client: str,
   if mode == QueryMode.STRICT:
     # Strict mode is compatible only with Heuristic Detector!
     detector_type = RequestedDetectorType.Heuristic.value
+    use_default_place = False
+  elif params.is_toolformer_mode(mode):
+    # do not use default place for toolformer
     use_default_place = False
 
   counters = ctr.Counters()
@@ -174,20 +180,28 @@ def parse_query_and_detect(request: Dict, backend: str, client: str,
     use_default_place = False
 
   # See if we have a variable reranker model specified.
-  reranker = request.args.get('reranker')
-  rerank_fn = None
-  if reranker:
-    if not current_app.config.get('VERTEX_AI_MODELS'):
-      counters.err('unconfigured_vertex_ai_models', 1)
-    elif not current_app.config['VERTEX_AI_MODELS'].get(reranker):
-      counters.err('nonexistent_reranker_model', reranker)
-    elif not current_app.config['VERTEX_AI_MODELS'][reranker].get(
-        'prediction_client'):
-      counters.err('reranker_without_prediction_client', reranker)
-    else:
-      minfo = current_app.config['VERTEX_AI_MODELS'][reranker][
-          'prediction_client']
-      rerank_fn = minfo.predict
+  reranker = request.args.get(params.Params.RERANKER.value)
+
+  # Get sv threshold as a float if it was passed in the request
+  var_threshold = request.args.get(params.Params.VAR_THRESHOLD.value)
+  if var_threshold:
+    # if sv_threshold is not a float, don't set sv_threshold
+    try:
+      var_threshold = float(var_threshold)
+    except Exception:
+      var_threshold = None
+
+  # StopWords handling
+  include_stop_words_str = request.args.get(
+      params.Params.INCLUDE_STOP_WORDS.value, '')
+
+  detection_args = DetectionArgs(
+      embeddings_index_types=embeddings_index_types,
+      mode=mode,
+      reranker=reranker,
+      allow_triples=allow_triples,
+      include_stop_words=include_stop_words_str.lower() == 'true',
+      var_threshold=var_threshold)
 
   # Query detection routine:
   # Returns detection for Place, SVs and Query Classifications.
@@ -196,12 +210,9 @@ def parse_query_and_detect(request: Dict, backend: str, client: str,
                                     original_query=original_query,
                                     no_punct_query=query,
                                     prev_utterance=prev_utterance,
-                                    embeddings_index_type=embeddings_index_type,
                                     query_detection_debug_logs=debug_logs,
-                                    mode=mode,
                                     counters=counters,
-                                    rerank_fn=rerank_fn,
-                                    allow_triples=allow_triples)
+                                    dargs=detection_args)
   if not query_detection:
     err_json = helpers.abort('Sorry, could not complete your request.',
                              original_query,
@@ -246,6 +257,33 @@ def parse_query_and_detect(request: Dict, backend: str, client: str,
       return None, err_json
 
   return utterance, None
+
+
+def update_insight_ctx_for_chart_fulfill(request: Dict,
+                                         utterance: nl_utterance.Utterance,
+                                         dc_name: str):
+  """This updates the insight context part of the utterance with information
+    from the request that is specifically needed for generating the chart config
+    during fulfill.
+
+    Args:
+      request: the original api request
+      utterance: the utterance generated for the request
+      dc_name: the value to use for the parameter "dc"
+  """
+  utterance.insight_ctx[params.Params.DC.value] = dc_name
+  # iterate through numeric parameters and set in the insight context
+  for p in [
+      params.Params.MAX_TOPIC_SVS,
+      params.Params.MAX_TOPICS,
+      params.Params.MAX_CHARTS,
+      params.Params.CHART_TYPE,
+  ]:
+    param_val = request.args.get(p, None)
+    if param_val != None:
+      if param_val.isnumeric():
+        param_val = int(param_val)
+    utterance.insight_ctx[p] = param_val
 
 
 #
@@ -348,9 +386,6 @@ def prepare_response(utterance: nl_utterance.Utterance,
       'pastSourceContext': utterance.past_source_context,
       'relatedThings': related_things,
       'userMessages': user_messages,
-      # TODO: userMessage is currently in use by UN client. Deprecate this once
-      # that code is updated.
-      'userMessage': user_messages[0] if len(user_messages) > 0 else "",
   }
   if user_message.show_form:
     data_dict['showForm'] = True
@@ -421,9 +456,6 @@ def abort(error_message: str,
       'context': escaped_context_history,
       'failure': error_message,
       'userMessages': [error_message],
-      # TODO: userMessage is currently in use by UN client. Deprecate this once
-      # that code is updated.
-      'userMessage': error_message
   }
 
   if not counters:

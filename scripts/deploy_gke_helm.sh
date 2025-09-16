@@ -28,7 +28,7 @@ ROOT="$(dirname "$DIR")"
 
 function help {
   echo "Usage: $0 -el"
-  echo "-e       Instance environment as defined under /deploy/gke"
+  echo "-e       Instance environment as defined under /deploy/helm_charts/envs"
   echo "-l       GKE location(zone or region) Default: us-central1"
   exit 1
 }
@@ -98,7 +98,8 @@ function deploy_mixer() {
   --set-file mixer.schemaConfigs."base\.mcf"=mixer/deploy/mapping/base.mcf \
   --set-file mixer.schemaConfigs."encode\.mcf"=mixer/deploy/mapping/encode.mcf \
   --set-file kgStoreConfig.bigqueryVersion=mixer/deploy/storage/bigquery.version \
-  --set-file kgStoreConfig.baseBigtableInfo=mixer/deploy/storage/base_bigtable_info.yaml
+  --set-file kgStoreConfig.baseBigtableInfo=mixer/deploy/storage/base_bigtable_info.yaml \
+  --set-file kgStoreConfig.spannerGraphInfo=mixer/deploy/storage/spanner_graph_info.yaml
 }
 
 # Deploy Cloud Endpoints
@@ -137,15 +138,15 @@ function deploy_website() {
   done
   helm upgrade --install dc-website deploy/helm_charts/dc_website \
   -f "deploy/helm_charts/envs/$ENV.yaml" \
+  --debug \
   --atomic \
-  --timeout 10m \
+  --timeout 15m \
   --set website.image.tag="$WEBSITE_HASH" \
   --set website.githash="$WEBSITE_HASH" \
   --set nodejs.apiRoot="$WEBSITE_SERVICE_URL" \
   --set cronTesting.webApiRoot="$WEBSITE_SERVICE_URL" \
   --set cronTesting.nodejsApiRoot="$NODEJS_SERVICE_URL" \
-  --set-file nl.embeddings=deploy/nl/embeddings.yaml \
-  --set-file nl.models=deploy/nl/models.yaml \
+  --set-file nl.catalog=deploy/nl/catalog.yaml \
   --set-file website.placeSummary.data.country=server/config/summaries/place_summaries_for_country_.json \
   --set-file website.placeSummary.data.geoid_0_2=server/config/summaries/place_summaries_for_geoId_0-2.json \
   --set-file website.placeSummary.data.geoid_3_5=server/config/summaries/place_summaries_for_geoId_3-5.json \

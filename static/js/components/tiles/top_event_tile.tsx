@@ -27,9 +27,11 @@ import {
   ASYNC_ELEMENT_HOLDER_CLASS,
 } from "../../constants/css_constants";
 import { INITIAL_LOADING_CLASS } from "../../constants/tile_constants";
-import { formatNumber } from "../../i18n/i18n";
+import { formatNumber, intl } from "../../i18n/i18n";
+import { messages } from "../../i18n/i18n_messages";
 import { ChartEmbed } from "../../place/chart_embed";
 import { NamedPlace, NamedTypedPlace } from "../../shared/types";
+import { TileSources } from "../../tools/shared/metadata/tile_sources";
 import {
   DisasterEventPoint,
   DisasterEventPointData,
@@ -43,8 +45,6 @@ import { stringifyFn } from "../../utils/axios";
 import { rankingPointsToCsv } from "../../utils/chart_csv_utils";
 import { getPlaceNames } from "../../utils/place_utils";
 import { formatPropertyValue } from "../../utils/property_value_utils";
-import { TileSources } from "../../utils/tile_utils";
-import { NlChartFeedback } from "../nl_feedback";
 import { ChartFooter } from "./chart_footer";
 
 const DEFAULT_RANKING_COUNT = 10;
@@ -213,11 +213,11 @@ export const TopEventTile = memo(function TopEventTile(
             </table>
           )}
           <ChartFooter
-            handleEmbed={showChart ? () => handleEmbed(topEvents) : null}
+            handleEmbed={showChart ? (): void => handleEmbed(topEvents) : null}
             exploreLink={
               props.showExploreMore
                 ? {
-                    displayText: "Disaster Tool",
+                    displayText: intl.formatMessage(messages.disasterTool),
                     url: `${EXPLORE_MORE_BASE_URL}${props.place.dcid}`,
                   }
                 : null
@@ -225,7 +225,6 @@ export const TopEventTile = memo(function TopEventTile(
           />
         </div>
       </div>
-      <NlChartFeedback id={props.id} />
       <ChartEmbed ref={embedModalElement} />
     </div>
   );
@@ -398,14 +397,14 @@ export const TopEventTile = memo(function TopEventTile(
     );
   }
 
-  function isUnnamedEvent(name: string) {
+  function isUnnamedEvent(name: string): boolean {
     return (
       name.indexOf("started on") > 0 ||
       (name.indexOf("Event at") > 0 && name.indexOf(" on ") > 0)
     );
   }
 
-  function getEventName(event: DisasterEventPoint) {
+  function getEventName(event: DisasterEventPoint): string {
     let name = event.placeName;
     if (isUnnamedEvent(name)) {
       const eventTypeName = props.eventTypeSpec.name;

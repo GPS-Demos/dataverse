@@ -49,7 +49,7 @@ export function DatasetSelector(props: DatasetSelectorProps): JSX.Element {
             className={`${CSS_PREFIX}-custom-input`}
             type="select"
             value={props.source}
-            onChange={(e) => {
+            onChange={(e): void => {
               const dcid = e.currentTarget.value ? e.currentTarget.value : "";
               updateHash({
                 [SV_URL_PARAMS.SOURCE]: dcid,
@@ -75,9 +75,12 @@ export function DatasetSelector(props: DatasetSelectorProps): JSX.Element {
             className={`${CSS_PREFIX}-custom-input`}
             type="select"
             value={props.dataset}
-            onChange={(e) => {
+            onChange={(e): void => {
               const dcid = e.currentTarget.value ? e.currentTarget.value : "";
-              updateHash({ [SV_URL_PARAMS.DATASET]: dcid });
+              updateHash({
+                [SV_URL_PARAMS.SOURCE]: props.source,
+                [SV_URL_PARAMS.DATASET]: dcid,
+              });
             }}
           >
             <option value="">Dataset</option>

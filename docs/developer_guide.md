@@ -31,13 +31,27 @@ website and mixer changes.
 
 **WARNING**: Make sure to go through each of the following steps.
 
-- Python 3.11
+- Python
 
-  Confirm the Python3 version is 3.11.x. Otherwise install/upgrade your Python
+  Confirm the Python3 version is 3.11 or above. Otherwise install/upgrade your Python
   and confirm the version:
 
   ```bash
   python3 --version
+  ```
+
+  Set up your Python environment and update packages with:
+  ```bash
+  ./run_test.sh --setup_python
+  ```
+
+  If using version 3.12.x or above, you also need to run the following command, on macOs:
+  ```bash
+  brew install python-setuptools
+  ```
+  or for linux:
+  ```bash
+  pip install python-setuptools
   ```
 
 - Node.js 18.4.0
@@ -51,10 +65,21 @@ website and mixer changes.
   nvm use 18.4.0
   ```
 
-- Protoc 3.21.9
+  To set this version as default:
+
+  ```bash
+  nvm alias default 18.4.0
+  ```
+
+- Protoc 3.21.12
 
   Install [`protoc`](https://grpc.io/docs/protoc-installation/) at version
-  3.21.9.
+  3.21.12.
+
+  On MacOS, you can do this with Homebrew by running `brew install protobuf@21`.
+  Be sure to update your path as described in the output (likely it'll instruct
+  you to run
+  `echo 'export PATH="/opt/homebrew/opt/protobuf@21/bin:$PATH"' >> ~/.zshrc`).
 
 - [Optional] gcloud
 
@@ -93,6 +118,12 @@ Start the flask webserver locally at localhost:8080
 ./run_server.sh
 ```
 
+To enable NL search, language models must be enabled via `-m`:
+
+```bash
+./run_server.sh -m
+```
+
 If you don't have access to DataCommons maps API, can bring up website without
 place search functionality
 
@@ -110,11 +141,18 @@ The following example will start localhost on port 8081. The default is 8080.
 Please note the strict syntax requirements for the script, and leave a space
 after the flag. So: `./run_server.sh -p 8081` but not `./run_server.sh -p=8081`.
 
-To enable language models
+#### 🛠️ Troubleshooting server startup
+<details>
+  <summary>
+    <b>ModuleNotFoundError</b>: missing python libraries...
+  </summary>
+  Clear the environment and rebuild all required libraries by running:
 
-```bash
-./run_server.sh -m
-```
+  ```bash
+  rm -rf .env
+  ./run_test.sh --setup_python
+  ```
+</details>
 
 ### Start NL Server
 
@@ -127,6 +165,14 @@ to be brought up locally (in a separate process):
 ```
 
 By default the NL server runs on port 6060.
+
+If you run into problems starting the server, try running these commands before restarting the server:
+```bash
+./run_test.sh --setup_python
+rm -rf ~/.datacommons
+rm -rf /tmp/datcom-nl-models
+rm -rf /tmp/datcom-nl-models-dev
+```
 
 ### Use Local Mixer
 
@@ -225,7 +271,7 @@ data. For this to happen in other dev/demo instance, in a clean git checkout,
 simply run:
 
 ```bash
-./script/deploy_latest.sh <ENV_NAME>
+./script/deploy_latest.sh <ENV_NAME> <REGION>
 ```
 
 ### Debug Flask in Visual Studio Code
@@ -247,6 +293,10 @@ TIPS: you can inspect variable in the botton of "DEBUG CONSOLE" window.
 
 A full tutorial of debugging Flask app in Visual Studio Code is in
 [here](https://code.visualstudio.com/docs/python/tutorial-flask).
+
+### Manage Feature Flags
+
+Feature flags are used to gate the rollout of features, and can easily be turned on/off in various environments. Please read the Feature Flags [guide](https://github.com/datacommonsorg/website/blob/master/docs/feature_flags.md).
 
 ### Add new charts in Place Page
 
@@ -317,18 +367,6 @@ A full tutorial of debugging Flask app in Visual Studio Code is in
   self.driver.save_screenshot(filename)
   ```
 
-### Working with NL Models
-
-NL models are large and take time to load. They are intialized once in
-production but would reload in local environment every time the code changes. We
-cache the model object in a disk cache for 1 day to make things faster.
-
-If you need to reload new embeddings, can manually remove the cache by
-
-```bash
-rm -rf ~/.datacommons/cache.*
-```
-
 ### GKE config
 
 The GKE configuration is stored [here](../deploy/helm_charts/dc_website).
@@ -343,3 +381,10 @@ the same region.
 
 To test .yaml cloudbuild files, you can use cloud-build-local to dry run the file before actually pushing. Find documentation for how to install and use cloud-build-local [here](https://github.com/GoogleCloudPlatform/cloud-build-local).
 
+### Inline Icons
+
+The Data Commons site makes use of Material Design icons. In certain cases, font-based Material Design icon usage can result in
+flashes of unstyled content that can be avoided by using SVG icons.
+
+We have provided tools to facilitate the creation and use of Material SVG icons in both the Jinja template and in React components.
+For instructions  on how to generate and use these SVGs and components, please see: [Icon Readme](../tools/resources/icons/README.md):

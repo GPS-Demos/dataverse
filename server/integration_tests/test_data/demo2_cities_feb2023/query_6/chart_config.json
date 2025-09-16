@@ -12,14 +12,14 @@
                     "comparisonPlaces": [
                       "country/DZA",
                       "country/MAR",
-                      "country/LBY",
                       "country/TUN",
-                      "country/MLI",
-                      "country/ERI",
                       "country/MWI",
-                      "country/SEN",
                       "country/GMB",
-                      "country/SSD"
+                      "country/ERI",
+                      "country/MLI",
+                      "country/SSD",
+                      "country/CMR",
+                      "country/SEN"
                     ],
                     "statVarKey": [
                       "LifeExpectancy_Person10"
@@ -61,47 +61,11 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/LBY",
-                    "statVarKey": [
-                      "LifeExpectancy_Person_growth_abs"
-                    ],
-                    "title": "Libya",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
                     "placeDcidOverride": "country/TUN",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_abs"
                     ],
                     "title": "Tunisia",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "placeDcidOverride": "country/MLI",
-                    "statVarKey": [
-                      "LifeExpectancy_Person_growth_abs"
-                    ],
-                    "title": "Mali",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "placeDcidOverride": "country/ERI",
-                    "statVarKey": [
-                      "LifeExpectancy_Person_growth_abs"
-                    ],
-                    "title": "Eritrea",
                     "type": "LINE"
                   }
                 ]
@@ -121,11 +85,11 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/SEN",
+                    "placeDcidOverride": "country/GMB",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_abs"
                     ],
-                    "title": "Senegal",
+                    "title": "Gambia",
                     "type": "LINE"
                   }
                 ]
@@ -133,11 +97,23 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/GMB",
+                    "placeDcidOverride": "country/ERI",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_abs"
                     ],
-                    "title": "Gambia",
+                    "title": "Eritrea",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "placeDcidOverride": "country/MLI",
+                    "statVarKey": [
+                      "LifeExpectancy_Person_growth_abs"
+                    ],
+                    "title": "Mali",
                     "type": "LINE"
                   }
                 ]
@@ -153,12 +129,48 @@
                     "type": "LINE"
                   }
                 ]
+              },
+              {
+                "tiles": [
+                  {
+                    "placeDcidOverride": "country/CMR",
+                    "statVarKey": [
+                      "LifeExpectancy_Person_growth_abs"
+                    ],
+                    "title": "Cameroon",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "placeDcidOverride": "country/SEN",
+                    "statVarKey": [
+                      "LifeExpectancy_Person_growth_abs"
+                    ],
+                    "title": "Senegal",
+                    "type": "LINE"
+                  }
+                ]
               }
             ],
             "title": "Increase in Life Expectancy Over Time (Absolute Change)"
           },
           {
             "columns": [
+              {
+                "tiles": [
+                  {
+                    "placeDcidOverride": "country/SSD",
+                    "statVarKey": [
+                      "LifeExpectancy_Person_growth_pct"
+                    ],
+                    "title": "South Sudan",
+                    "type": "LINE"
+                  }
+                ]
+              },
               {
                 "tiles": [
                   {
@@ -174,11 +186,23 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/SSD",
+                    "placeDcidOverride": "country/MWI",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_pct"
                     ],
-                    "title": "South Sudan",
+                    "title": "Malawi",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "placeDcidOverride": "country/GMB",
+                    "statVarKey": [
+                      "LifeExpectancy_Person_growth_pct"
+                    ],
+                    "title": "Gambia",
                     "type": "LINE"
                   }
                 ]
@@ -198,11 +222,11 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/MWI",
+                    "placeDcidOverride": "country/SLE",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_pct"
                     ],
-                    "title": "Malawi",
+                    "title": "Sierra Leone",
                     "type": "LINE"
                   }
                 ]
@@ -210,11 +234,11 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/LBY",
+                    "placeDcidOverride": "country/CMR",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_pct"
                     ],
-                    "title": "Libya",
+                    "title": "Cameroon",
                     "type": "LINE"
                   }
                 ]
@@ -234,30 +258,6 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/GMB",
-                    "statVarKey": [
-                      "LifeExpectancy_Person_growth_pct"
-                    ],
-                    "title": "Gambia",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
-                    "placeDcidOverride": "country/SLE",
-                    "statVarKey": [
-                      "LifeExpectancy_Person_growth_pct"
-                    ],
-                    "title": "Sierra Leone",
-                    "type": "LINE"
-                  }
-                ]
-              },
-              {
-                "tiles": [
-                  {
                     "placeDcidOverride": "country/MAR",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_pct"
@@ -270,11 +270,11 @@
               {
                 "tiles": [
                   {
-                    "placeDcidOverride": "country/CMR",
+                    "placeDcidOverride": "country/TUN",
                     "statVarKey": [
                       "LifeExpectancy_Person_growth_pct"
                     ],
-                    "title": "Cameroon",
+                    "title": "Tunisia",
                     "type": "LINE"
                   }
                 ]
@@ -695,6 +695,5 @@
     "peerTopics": []
   },
   "svSource": "CURRENT_QUERY",
-  "userMessage": "",
   "userMessages": []
 }

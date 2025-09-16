@@ -14,13 +14,21 @@
  * limitations under the License.
  */
 
-jest.mock("axios");
+/* eslint-disable camelcase */
 
+import theme from "../../theme/theme";
+
+jest.mock("axios");
+jest.mock("../../tools/shared/metadata/metadata_fetcher", () => ({
+  fetchFacetsWithMetadata: jest.fn().mockResolvedValue({}),
+}));
+
+import { ThemeProvider } from "@emotion/react";
 import { act, waitFor } from "@testing-library/react";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 import axios from "axios";
 import Cheerio from "cheerio";
-import Enzyme, { mount, ReactWrapper } from "enzyme";
+import Enzyme, { mount } from "enzyme";
 import { when } from "jest-when";
 import React, { useEffect } from "react";
 
@@ -49,9 +57,11 @@ function TestApp(): JSX.Element {
     });
   }, []);
   return (
-    <Context.Provider value={context}>
-      <App />
-    </Context.Provider>
+    <ThemeProvider theme={theme}>
+      <Context.Provider value={context}>
+        <App />
+      </Context.Provider>
+    </ThemeProvider>
   );
 }
 
@@ -72,8 +82,13 @@ beforeEach(() => {
   window.infoConfig = {};
 
   // Stub getComputedTextLength and getBBox in SVGElement as they do not exist in d3node
-  SVGElement.prototype.getComputedTextLength = () => 100;
-  SVGElement.prototype.getBBox = () => ({ x: 1, y: 1, width: 1, height: 1 });
+  SVGElement.prototype.getComputedTextLength = (): number => 100;
+  SVGElement.prototype.getBBox = (): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } => ({ x: 1, y: 1, width: 1, height: 1 });
 });
 
 function mockAxios(): void {
@@ -494,7 +509,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Root",
       entities: ["geoId/10001", "geoId/10003", "geoId/10005"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(rootGroupsData);
 
@@ -502,7 +517,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Root",
       entities: ["geoId/10001", "geoId/10005", "geoId/10003"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(rootGroupsData);
 
@@ -510,7 +525,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Root",
       entities: ["geoId/10003", "geoId/10001", "geoId/10005"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(rootGroupsData);
 
@@ -518,7 +533,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Root",
       entities: ["geoId/10003", "geoId/10005", "geoId/10001"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(rootGroupsData);
 
@@ -526,7 +541,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Root",
       entities: ["geoId/10005", "geoId/10003", "geoId/10001"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(rootGroupsData);
 
@@ -534,7 +549,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Root",
       entities: ["geoId/10005", "geoId/10001", "geoId/10003"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(rootGroupsData);
 
@@ -542,7 +557,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Demographics",
       entities: ["geoId/10001", "geoId/10003", "geoId/10005"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(demographicsGroupsData);
 
@@ -550,7 +565,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Demographics",
       entities: ["geoId/10001", "geoId/10005", "geoId/10003"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(demographicsGroupsData);
 
@@ -558,7 +573,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Demographics",
       entities: ["geoId/10003", "geoId/10001", "geoId/10005"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(demographicsGroupsData);
 
@@ -566,7 +581,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Demographics",
       entities: ["geoId/10003", "geoId/10005", "geoId/10001"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(demographicsGroupsData);
 
@@ -574,7 +589,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Demographics",
       entities: ["geoId/10005", "geoId/10003", "geoId/10001"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(demographicsGroupsData);
 
@@ -582,7 +597,7 @@ function mockAxios(): void {
     .calledWith("/api/variable-group/info", {
       dcid: "dc/g/Demographics",
       entities: ["geoId/10005", "geoId/10001", "geoId/10003"],
-      numEntitiesExistence: 3,
+      numEntitiesExistence: 1,
     })
     .mockResolvedValue(demographicsGroupsData);
 
@@ -738,11 +753,12 @@ test("all functionalities", async () => {
   });
 
   // Clicking swap axis should successfully swap the x and y axis
-  await act(async () => {
+  await act(async (): Promise<void> => {
     app.find("#swap-axes").at(0).simulate("click");
   });
   await app.update();
-  const expectTitle = (title: string) => expect(app.text()).toContain(title);
+  const expectTitle = (title: string): void =>
+    expect(app.text()).toContain(title);
   expectTitle("Employed (2016)vsHousing Units (2016)");
   expectCircles(3, app);
 

@@ -24,7 +24,6 @@ $small-font-size: 0.75rem;
   font-size: 14px;
   font-weight: 700;
   line-height: 28px;
-  min-height: 20rem;
   padding: 0 10px;
 }
 
@@ -58,10 +57,12 @@ $small-font-size: 0.75rem;
 }
 
 .node-title {
-  align-items: center;
   display: flex;
   margin-bottom: 4px;
-  white-space: nowrap;
+}
+
+.node-title input {
+  margin-top: 0.4rem;
 }
 
 .node-title .bullet + .title {
@@ -95,7 +96,7 @@ $small-font-size: 0.75rem;
 .clear-search {
   position: absolute;
   right: 0.3rem;
-  top: 0.7rem;
+  top: 0.3rem;
   cursor: pointer;
 }
 
@@ -117,6 +118,24 @@ $small-font-size: 0.75rem;
   line-height: 1.8;
 }
 
+.load-more-button {
+  border: none;
+  box-shadow: none;
+  width: 100%;
+  text-align: left;
+  background-color: transparent;
+  padding: 0;
+}
+
+.load-more-text {
+  color: #7b7b7b;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  padding: 0.4rem 15px 0 15px;
+}
+
+.load-more-button:hover,
 .search-result-value:hover {
   cursor: pointer;
   background-color: var(--dc-gray-lite);

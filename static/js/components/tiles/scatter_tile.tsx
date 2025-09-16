@@ -21,7 +21,14 @@
 import { ISO_CODE_ATTRIBUTE } from "@datacommonsorg/client";
 import axios from "axios";
 import _ from "lodash";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { VisType } from "../../apps/visualization/vis_type_configs";
 import {
@@ -33,9 +40,23 @@ import {
 import { URL_PATH } from "../../constants/app/visualization_constants";
 import { ChartQuadrant } from "../../constants/scatter_chart_constants";
 import { CSV_FIELD_DELIMITER } from "../../constants/tile_constants";
-import { PointApiResponse, SeriesApiResponse } from "../../shared/stat_types";
-import { NamedTypedPlace, StatVarSpec } from "../../shared/types";
-import { loadSpinner, removeSpinner } from "../../shared/util";
+import { intl } from "../../i18n/i18n";
+import { messages } from "../../i18n/i18n_messages";
+import { useLazyLoad } from "../../shared/hooks";
+import {
+  buildObservationSpecs,
+  ObservationSpec,
+} from "../../shared/observation_specs";
+import {
+  PointApiResponse,
+  SeriesApiResponse,
+  StatMetadata,
+} from "../../shared/stat_types";
+import {
+  NamedTypedPlace,
+  StatVarFacetMap,
+  StatVarSpec,
+} from "../../shared/types";
 import { SHOW_POPULATION_OFF } from "../../tools/scatter/context";
 import { getStatWithinPlace } from "../../tools/scatter/util";
 import { ScatterTileSpec } from "../../types/subject_page_proto_types";
@@ -44,19 +65,19 @@ import {
   getHash,
 } from "../../utils/app/visualization_utils";
 import { stringifyFn } from "../../utils/axios";
+import { getDataCommonsClient } from "../../utils/data_commons_client";
 import { getSeriesWithin } from "../../utils/data_fetch_utils";
-import { datacommonsClient } from "../../utils/datacommons_client";
 import { getStringOrNA } from "../../utils/number_utils";
 import { getPlaceScatterData } from "../../utils/scatter_data_utils";
 import { getDateRange } from "../../utils/string_utils";
 import {
+  clearContainer,
   getDenomInfo,
   getFirstCappedStatVarSpecDate,
   getNoDataErrorMsg,
   getStatFormat,
   getStatVarNames,
   ReplacementStrings,
-  showError,
   transformCsvHeader,
 } from "../../utils/tile_utils";
 import { ChartTileContainer } from "./chart_tile";
@@ -77,8 +98,6 @@ export interface ScatterTilePropType {
   apiRoot?: string;
   // Whether or not to show the explore more button.
   showExploreMore?: boolean;
-  // Whether or not to show a loading spinner when fetching data.
-  showLoadingSpinner?: boolean;
   // Text to show in footer
   footnote?: string;
   // The property to use to get place names.
@@ -87,6 +106,13 @@ export interface ScatterTilePropType {
   subtitle?: string;
   // Optional: Override sources for this tile
   sources?: string[];
+  // Optional: only load this component when it's near the viewport
+  lazyLoad?: boolean;
+  /**
+   * Optional: If lazy loading is enabled, load the component when it is within
+   * this margin of the viewport. Default: "0px"
+   */
+  lazyLoadMargin?: string;
 }
 
 interface RawData {
@@ -100,7 +126,12 @@ interface ScatterChartData {
   xStatVar: StatVarSpec;
   yStatVar: StatVarSpec;
   points: { [placeDcid: string]: Point };
+  // A set of string sources (URLs)
   sources: Set<string>;
+  // A full set of the facets used within the chart
+  facets: Record<string, StatMetadata>;
+  // A mapping of which stat var used which facets
+  statVarToFacets: StatVarFacetMap;
   xUnit: string;
   yUnit: string;
   xDate: string;
@@ -113,26 +144,47 @@ interface ScatterChartData {
   yStatVarName: string;
 }
 
-export function ScatterTile(props: ScatterTilePropType): JSX.Element {
+export function ScatterTile(props: ScatterTilePropType): ReactElement {
   const svgContainer = useRef(null);
   const tooltip = useRef(null);
   const [scatterChartData, setScatterChartData] = useState<
     ScatterChartData | undefined
   >(null);
-
+  const [isLoading, setIsLoading] = useState(true);
+  const { shouldLoad, containerRef } = useLazyLoad(props.lazyLoadMargin);
+  /*
+    TODO: (nick-next) destructure the props similarly to highlight to
+          allow a complete dependency array.
+   */
   useEffect(() => {
+    if (props.lazyLoad && !shouldLoad) {
+      return;
+    }
     if (scatterChartData && areDataPropsEqual()) {
       // only re-fetch if the props that affect data fetch are not equal
       return;
     }
-    loadSpinner(getSpinnerId());
-    (async () => {
-      const data = await fetchData(props);
-      if (props && data && _.isEqual(data.props, props)) {
-        setScatterChartData(data);
+    (async (): Promise<void> => {
+      try {
+        setIsLoading(true);
+        const data = await fetchData(props);
+        if (props && data && _.isEqual(data.props, props)) {
+          setScatterChartData(data);
+        }
+      } finally {
+        setIsLoading(false);
       }
     })();
-  }, [props, scatterChartData]);
+  }, [
+    props.lazyLoad,
+    props.apiRoot,
+    props.place.dcid,
+    props.placeNameProp,
+    props.enclosedPlaceType,
+    props.statVarSpec,
+    scatterChartData,
+    shouldLoad,
+  ]);
 
   const drawFn = useCallback(() => {
     if (!scatterChartData || !areDataPropsEqual()) {
@@ -145,32 +197,77 @@ export function ScatterTile(props: ScatterTilePropType): JSX.Element {
       tooltip.current,
       props.scatterTileSpec || {}
     );
-    removeSpinner(getSpinnerId());
-  }, [props.svgChartHeight, props.scatterTileSpec, scatterChartData]);
+  }, [
+    props.svgChartHeight,
+    props.scatterTileSpec,
+    scatterChartData,
+    shouldLoad,
+  ]);
 
   useDrawOnResize(drawFn, svgContainer.current);
 
+  /**
+   * Callback function for building observation specifications.
+   * This is used by the API dialog to generate API calls (e.g., cURL
+   * commands) for the user.
+   *
+   * @returns A function that builds an array of `ObservationSpec`
+   * objects, or `undefined` if chart data is not yet available.
+   */
+  const getObservationSpecs = useMemo(() => {
+    if (!scatterChartData) {
+      return undefined;
+    }
+    return (): ObservationSpec[] => {
+      const entityExpression = `${props.place.dcid}<-containedInPlace+{typeOf:${props.enclosedPlaceType}}`;
+      const defaultDate =
+        getFirstCappedStatVarSpecDate(props.statVarSpec) || "LATEST";
+      return buildObservationSpecs({
+        statVarSpecs: props.statVarSpec,
+        statVarToFacets: scatterChartData.statVarToFacets,
+        entityExpression,
+        defaultDate,
+      });
+    };
+  }, [
+    scatterChartData,
+    props.place,
+    props.enclosedPlaceType,
+    props.statVarSpec,
+  ]);
+
   return (
     <ChartTileContainer
-      id={props.id}
-      title={props.title}
-      subtitle={props.subtitle}
-      sources={props.sources || (scatterChartData && scatterChartData.sources)}
-      replacementStrings={getReplacementStrings(props, scatterChartData)}
-      className={`${props.className} scatter-chart`}
       allowEmbed={true}
-      getDataCsv={getDataCsvCallback(props, scatterChartData)}
-      isInitialLoading={_.isNull(scatterChartData)}
+      apiRoot={props.apiRoot}
+      className={`${props.className} scatter-chart`}
       exploreLink={props.showExploreMore ? getExploreLink(props) : null}
-      hasErrorMsg={scatterChartData && !!scatterChartData.errorMsg}
       footnote={props.footnote}
+      getDataCsv={getDataCsvCallback(props, scatterChartData)}
+      getObservationSpecs={getObservationSpecs}
+      errorMsg={scatterChartData && scatterChartData.errorMsg}
+      id={props.id}
+      isInitialLoading={_.isNull(scatterChartData)}
+      isLoading={isLoading}
+      replacementStrings={getReplacementStrings(props, scatterChartData)}
+      sources={props.sources || (scatterChartData && scatterChartData.sources)}
+      facets={scatterChartData?.facets}
+      statVarToFacets={scatterChartData?.statVarToFacets}
+      subtitle={props.subtitle}
+      title={props.title}
+      statVarSpecs={props.statVarSpec}
+      forwardRef={containerRef}
     >
       <div className="scatter-tile-content">
         <div
           id={props.id}
           className="scatter-svg-container"
           ref={svgContainer}
-          style={{ minHeight: props.svgChartHeight }}
+          style={{
+            minHeight: props.svgChartHeight,
+            display:
+              scatterChartData && scatterChartData.errorMsg ? "none" : "block",
+          }}
         />
         <div
           id="scatter-tooltip"
@@ -178,19 +275,8 @@ export function ScatterTile(props: ScatterTilePropType): JSX.Element {
           style={{ visibility: "hidden" }}
         />
       </div>
-      {props.showLoadingSpinner && (
-        <div id={getSpinnerId()}>
-          <div className="screen">
-            <div id="spinner"></div>
-          </div>
-        </div>
-      )}
     </ChartTileContainer>
   );
-
-  function getSpinnerId(): string {
-    return `scatter-spinner-${props.id}`;
-  }
 
   function areDataPropsEqual(): boolean {
     const oldDataProps = [
@@ -210,6 +296,7 @@ export function ScatterTile(props: ScatterTilePropType): JSX.Element {
 /**
  * Returns callback for fetching chart CSV data
  * @param props Chart properties
+ * @param scatterChartData Chart data
  * @returns Async function for fetching chart CSV
  */
 function getDataCsvCallback(
@@ -217,6 +304,7 @@ function getDataCsvCallback(
   scatterChartData: ScatterChartData
 ): () => Promise<string> {
   return () => {
+    const dataCommonsClient = getDataCommonsClient(props.apiRoot);
     // Assume both variables will have the same date
     // TODO: Update getCsv to handle different dates for different variables
     const date = getFirstCappedStatVarSpecDate(props.statVarSpec);
@@ -227,7 +315,7 @@ function getDataCsvCallback(
     const entityProps = props.placeNameProp
       ? [props.placeNameProp, ISO_CODE_ATTRIBUTE]
       : undefined;
-    return datacommonsClient.getCsv({
+    return dataCommonsClient.getCsv({
       childType: props.enclosedPlaceType,
       date,
       entityProps,
@@ -279,7 +367,9 @@ function getPopulationPromise(
   }
 }
 
-export const fetchData = async (props: ScatterTilePropType) => {
+export const fetchData = async (
+  props: ScatterTilePropType
+): Promise<ScatterChartData> => {
   if (props.statVarSpec.length < 2) {
     // TODO: add error message
     return;
@@ -351,11 +441,40 @@ function rawToChart(
     return;
   }
   const points = {};
+
   const sources: Set<string> = new Set();
+  const facets: Record<string, StatMetadata> = {};
+  const statVarToFacets: StatVarFacetMap = {};
+
   const xDates: Set<string> = new Set();
   const yDates: Set<string> = new Set();
   const xUnitScaling = getStatFormat(xStatVar, rawData.placeStats);
   const yUnitScaling = getStatFormat(yStatVar, rawData.placeStats);
+
+  const metadataMap = rawData.placeStats.facets || {};
+
+  for (const place in xPlacePointStat) {
+    const facetId = xPlacePointStat[place].facet;
+    if (facetId && metadataMap[facetId]) {
+      facets[facetId] = metadataMap[facetId];
+      if (!statVarToFacets[xStatVar.statVar]) {
+        statVarToFacets[xStatVar.statVar] = new Set();
+      }
+      statVarToFacets[xStatVar.statVar].add(facetId);
+    }
+  }
+
+  for (const place in yPlacePointStat) {
+    const facetId = yPlacePointStat[place].facet;
+    if (facetId && metadataMap[facetId]) {
+      facets[facetId] = metadataMap[facetId];
+      if (!statVarToFacets[yStatVar.statVar]) {
+        statVarToFacets[yStatVar.statVar] = new Set();
+      }
+      statVarToFacets[yStatVar.statVar].add(facetId);
+    }
+  }
+
   for (const place in xPlacePointStat) {
     const namedPlace = {
       dcid: place,
@@ -396,6 +515,19 @@ function rawToChart(
       point.xPopDate = denomInfo.date;
       point.xPopVal = denomInfo.value;
       sources.add(denomInfo.source);
+      const xDenomStatVar = xStatVar.denom;
+      const xDenomSeries = rawData.population.data?.[xDenomStatVar]?.[place];
+      if (xDenomSeries?.facet) {
+        const denomFacetId = xDenomSeries.facet;
+        const denomFacetMetadata = rawData.population.facets?.[denomFacetId];
+        if (denomFacetMetadata) {
+          facets[denomFacetId] = denomFacetMetadata;
+          if (!statVarToFacets[xDenomStatVar]) {
+            statVarToFacets[xDenomStatVar] = new Set<string>();
+          }
+          statVarToFacets[xDenomStatVar].add(denomFacetId);
+        }
+      }
     }
     if (xUnitScaling.scaling) {
       point.xVal *= xUnitScaling.scaling;
@@ -415,6 +547,19 @@ function rawToChart(
       point.yPopDate = denomInfo.date;
       point.yPopVal = denomInfo.value;
       sources.add(denomInfo.source);
+      const yDenomStatVar = yStatVar.denom;
+      const yDenomSeries = rawData.population.data?.[yDenomStatVar]?.[place];
+      if (yDenomSeries?.facet) {
+        const denomFacetId = yDenomSeries.facet;
+        const denomFacetMetadata = rawData.population.facets?.[denomFacetId];
+        if (denomFacetMetadata) {
+          facets[denomFacetId] = denomFacetMetadata;
+          if (!statVarToFacets[yDenomStatVar]) {
+            statVarToFacets[yDenomStatVar] = new Set<string>();
+          }
+          statVarToFacets[yDenomStatVar].add(denomFacetId);
+        }
+      }
     }
     if (yUnitScaling.scaling) {
       point.yVal *= yUnitScaling.scaling;
@@ -431,6 +576,8 @@ function rawToChart(
     yStatVar,
     points,
     sources,
+    facets,
+    statVarToFacets,
     xUnit: xUnitScaling.unit,
     yUnit: yUnitScaling.unit,
     xDate: getDateRange(Array.from(xDates)),
@@ -446,7 +593,7 @@ function getTooltipElement(
   point: Point,
   xLabel: string,
   yLabel: string
-): JSX.Element {
+): ReactElement {
   return (
     <>
       <header>
@@ -470,7 +617,7 @@ export function draw(
   chartTitle?: string
 ): void {
   if (chartData.errorMsg) {
-    showError(chartData.errorMsg, svgContainer);
+    clearContainer(svgContainer);
     return;
   }
   const width = svgWidth || svgContainer.offsetWidth;
@@ -539,7 +686,7 @@ function getExploreLink(props: ScatterTilePropType): {
     displayOptions
   );
   return {
-    displayText: "Scatter Tool",
+    displayText: intl.formatMessage(messages.scatterTool),
     url: `${props.apiRoot || ""}${URL_PATH}#${hash}`,
   };
 }
